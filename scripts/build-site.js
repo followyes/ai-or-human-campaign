@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const RUNTIME_ENTRIES = Object.freeze(["index.html", "css", "js", "admin", "assets"]);
+const RUNTIME_ENTRIES = Object.freeze(["index.html", "campaign.html", "css", "js", "admin", "assets"]);
 
 async function copyRuntime(projectRoot, distRoot) {
   for (const entry of RUNTIME_ENTRIES) {
@@ -28,6 +28,7 @@ export async function buildSite({ projectRoot, distRoot = path.join(projectRoot,
 
   return Object.freeze({
     contentSource: "supabase",
+    campaignSource: "local-demo",
     distRoot
   });
 }
@@ -41,7 +42,7 @@ if (isMain) {
   buildSite({ projectRoot })
     .then((result) => {
       console.log("BUILD PASS");
-      console.log("Content source: Supabase only");
+      console.log("Content source: local campaign demo; legacy modes require separate Supabase");
       console.log(`Output: ${result.distRoot}`);
     })
     .catch((error) => {

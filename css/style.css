@@ -2816,3 +2816,9 @@ body.is-profile-dialog-open { overflow: hidden; }
   .streak-reward.is-active .streak-reward__title { animation: none; background-position: 0 center; }
   .streak-reward.is-active .streak-reward__underline { animation: none; width: 40%; opacity: .6; }
 }
+
+/* Campaign v0.2 entry: isolated from legacy gameplay. */
+.campaign-mode-entry { text-decoration: none; color: inherit; border-color: rgba(65, 159, 153, .42); background: linear-gradient(120deg, rgba(55, 158, 154, .08), transparent 70%); }
+.campaign-mode-entry:focus-visible { outline: 3px solid #31ac96; outline-offset: 3px; }
+.campaign-mode-entry .game-mode-card__icon { font-size: 1.6rem; }
+.campaign-entry-tag { font-size: .62rem; padding: .22em .5em; border-radius: 999px; color: #0e6159; background: #b9efe0; vertical-align: middle; margin-left: .25rem; letter-spacing: .07em; }

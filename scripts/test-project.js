@@ -660,7 +660,7 @@ async function testSeparateStreakCelebration() {
 }
 
 async function copyRuntimeFixture(targetRoot) {
-  for (const entry of ["index.html", "css", "js", "admin", "assets"]) {
+  for (const entry of ["index.html", "campaign.html", "css", "js", "admin", "assets"]) {
     await fs.cp(path.join(projectRoot, entry), path.join(targetRoot, entry), { recursive: true });
   }
 }

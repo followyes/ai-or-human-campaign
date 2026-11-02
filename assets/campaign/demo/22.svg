@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="620" viewBox="0 0 650 620" role="img" aria-label="Karta testowa 22, typ testowy: HUMAN">
+<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#19363d"/><stop offset="1" stop-color="#4d836e"/></linearGradient><linearGradient id="front" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#c1f9b7" stop-opacity=".36"/><stop offset="1" stop-color="#4d836e" stop-opacity=".4"/></linearGradient></defs>
+<rect width="650" height="620" fill="url(#bg)"/><circle cx="436" cy="187" r="80" fill="#c1f9b7" opacity=".65"/>
+<path d="M0 378 L358 208 L498 313 L583 253 L650 368 L650 620 L0 620Z" fill="#4d836e" opacity=".88"/>
+<path d="M0 423 L383 308 L538 448 L650 323 L650 620 L0 620Z" fill="url(#front)"/>
+<path d="M0 468 Q145 423 310 487 T650 469 V620 H0Z" fill="#19363d" opacity=".8"/>
+<rect x="34" y="29" width="125" height="30" rx="15" fill="#ffffff" fill-opacity=".13" stroke="#ffffff" stroke-opacity=".23"/><text x="96" y="49" fill="#eef9f5" font-family="Arial,sans-serif" font-size="14" font-weight="bold" letter-spacing="2" text-anchor="middle">DEMO 22</text>
+<text x="42" y="510" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" font-weight="bold" letter-spacing="4" opacity=".7">ARCHITEKTURA</text>
+<text x="42" y="570" fill="#ffffff" font-family="Arial,sans-serif" font-size="42" font-weight="bold" letter-spacing="1">HUMAN</text>
+<text x="610" y="570" fill="#ffffff" font-family="Arial,sans-serif" font-size="15" text-anchor="end" opacity=".65">TYPOLOGY / TEST</text>
+</svg>
