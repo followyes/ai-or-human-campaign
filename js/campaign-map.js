@@ -3,6 +3,8 @@ import {
   newProgress, sanitizeProgress, migratePreviousCooldown, regenerate, takeHeart,
   completeStage, isStageUnlocked, shuffleImages, formatTime
 } from "./campaign-core.js";
+import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js";
+import { resolveSupabasePublicConfig } from "./content-source.js";
 
 const $ = (selector) => document.querySelector(selector);
 const mapView = $("#campaign-map-view");
@@ -14,16 +16,34 @@ const card = $("#swipe-card");
 const image = $("#campaign-image");
 const feedback = $("#play-feedback");
 const answerButtons = [$("#answer-human"), $("#answer-ai")];
+const LIVE_STORAGE_KEY = "ai-or-human.campaign.live.v01";
+let currentStorageKey = STORAGE_KEY;
+let activeStages = STAGES;
+let sourceLoading = false;
+let contentSource = "demo";
 
-function restoreProgress() {
+function setContentNotice(text, demo = true) {
+  const note = $("#campaign-source-note");
+  const label = $("#campaign-source-text");
+  label.textContent = text;
+  note.dataset.source = demo ? "demo" : "supabase";
+  $("#play-source-text").textContent = demo
+    ? "Obrazy demonstracyjne: nie są to prawdziwe fotografie. Odpowiedź jest na karcie."
+    : "Zdjęcia z osobnego Supabase. Rozpoznaj źródło obrazu.";
+  $("#campaign-footer-source").textContent = demo ? "Dane lokalne • DEMO" : "Zdjęcia: Supabase • postęp lokalny";
+  $("#reset-demo").textContent = demo ? "Zresetuj testowy postęp" : "Zresetuj lokalny postęp";
+}
+
+
+function restoreProgress(key = STORAGE_KEY) {
   try {
-    let stored = sanitizeProgress(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+    let stored = sanitizeProgress(JSON.parse(localStorage.getItem(key)));
     // One-time conversion of a v0.2 ten-minute cooldown to the new three-minute rule.
     // Keep the same storage key to preserve all completed levels and remaining hearts.
-    if (localStorage.getItem(HEART_REGEN_MIGRATION_KEY) !== "done") {
+    if (key === STORAGE_KEY && localStorage.getItem(HEART_REGEN_MIGRATION_KEY) !== "done") {
       stored = migratePreviousCooldown(stored);
       localStorage.setItem(HEART_REGEN_MIGRATION_KEY, "done");
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      localStorage.setItem(key, JSON.stringify(stored));
     }
     return regenerate(stored);
   } catch { return newProgress(); }
@@ -35,7 +55,7 @@ let screen = "map";
 let feedbackTimeout = null;
 
 function save() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)); }
+  try { localStorage.setItem(currentStorageKey, JSON.stringify(progress)); }
   catch { /* Storage may be disabled; demo continues for this tab only. */ }
 }
 
@@ -80,7 +100,7 @@ function renderMap() {
   redrawHearts();
   progressLabel.textContent = `${progress.completed} / 6`;
   stops.replaceChildren();
-  STAGES.forEach((stage) => {
+  activeStages.forEach((stage) => {
     const done = stage.id <= progress.completed;
     const unlocked = isStageUnlocked(progress, stage.id);
     const item = document.createElement("li");
@@ -88,7 +108,7 @@ function renderMap() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `path-node ${done ? "path-node--completed" : unlocked ? "path-node--available" : "path-node--locked"}${stage.isBoss ? " path-node--boss" : ""}`;
-    button.disabled = !unlocked;
+    button.disabled = !unlocked || sourceLoading;
     button.title = unlocked ? `Zagraj: ${stage.isBoss ? "Boss" : `Poziom ${stage.id}`}` : "Najpierw ukończ poprzednie poziomy";
     button.setAttribute("aria-label", button.title);
     button.innerHTML = `<span class="path-node__symbol" aria-hidden="true">${!unlocked ? "♙" : stage.isBoss ? "♛" : done ? "★" : stage.id}</span>`;
@@ -118,7 +138,7 @@ function clearRunTimers() {
 
 function startStage(stage) {
   progress = regenerate(progress);
-  if (!isStageUnlocked(progress, stage.id)) return;
+  if (sourceLoading || !isStageUnlocked(progress, stage.id)) return;
   if (progress.hearts === 0) {
     showResult("Brak serc", "Poczekaj na regenerację jednego serca, aby rozpocząć poziom od początku.", "♥", null);
     return;
@@ -184,7 +204,7 @@ function winRun() {
   const stage = run.stage;
   progress = completeStage(progress, stage.id);
   save();
-  const nextStage = STAGES[stage.id] || null;
+  const nextStage = activeStages[stage.id] || null;
   showResult(stage.isBoss ? "Boss pokonany!" : `Poziom ${stage.id} ukończony!`,
     stage.isBoss ? "Świetnie! Ukończono demonstracyjną kampanię. Możesz powtarzać etapy na mapie." : `Zaliczone ${stage.images.length} kart. ${nextStage ? `Odblokowano ${nextStage.isBoss ? "bossa" : `poziom ${nextStage.id}`}.` : ""}`,
     stage.isBoss ? "♛" : "★", nextStage);
@@ -231,7 +251,7 @@ $("#answer-ai").addEventListener("click", () => answer("ai"));
 $("#back-to-map").addEventListener("click", () => { clearRunTimers(); run = null; setScreen("map"); });
 $("#result-map").addEventListener("click", () => setScreen("map"));
 $("#reset-demo").addEventListener("click", () => {
-  if (!window.confirm("Czy na pewno wyzerować lokalny postęp kampanii i przywrócić 3 serca? (Tylko demonstracja)")) return;
+  if (!window.confirm("Czy na pewno wyzerować lokalny postęp kampanii i przywrócić 3 serca? Zmiana dotyczy tylko tej przeglądarki.")) return;
   progress = newProgress();
   save();
   renderMap();
@@ -273,5 +293,42 @@ card.addEventListener("pointerup", endDrag);
 card.addEventListener("pointercancel", endDrag);
 
 renderMap();
+
+async function initializeCampaignSource() {
+  let config;
+  try {
+    config = resolveSupabasePublicConfig();
+  } catch (error) {
+    setContentNotice(`Błąd konfiguracji Supabase: ${error.message} Trwa tryb DEMO.`);
+    return;
+  }
+  if (!config.configured) {
+    setContentNotice("Tryb DEMO: brak konfiguracji Supabase. Karty są demonstracyjne, postęp jest lokalny.");
+    return;
+  }
+  sourceLoading = true;
+  setContentNotice("Łączenie z nowym Supabase… Poziomy zostaną udostępnione po sprawdzeniu danych.");
+  renderMap();
+  try {
+    const loaded = await fetchCampaignStages({ config });
+    if (loaded.ready) {
+      activeStages = loaded.stages;
+      contentSource = "supabase";
+      currentStorageKey = LIVE_STORAGE_KEY;
+      progress = restoreProgress(LIVE_STORAGE_KEY);
+      setContentNotice("Zdjęcia z nowego Supabase: 35/35 przypisanych do kampanii. Postęp nadal zapisuje się lokalnie.", false);
+    } else {
+      setContentNotice(`Połączono z Supabase: ${loaded.count}/35 zdjęć. Do czasu skompletowania zestawów działa DEMO.`);
+    }
+  } catch (error) {
+    const detail = error instanceof CampaignSourceError ? error.message : "Nie udało się pobrać zdjęć.";
+    setContentNotice(`Supabase nie jest gotowy: ${detail} Działa DEMO.`);
+  } finally {
+    sourceLoading = false;
+    renderMap();
+  }
+}
+
+void initializeCampaignSource();
 window.setInterval(syncTime, 250);
 window.addEventListener("pageshow", syncTime);

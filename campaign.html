@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
   <meta name="description" content="Testowa kampania AI or Human: 5 poziomów, 3 serca i boss.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.3">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.4">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./index.html" aria-label="AI or Human — wybór trybów"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <span class="edition-label">PROTOTYP • v0.3</span>
+      <span class="edition-label">PROTOTYP • v0.4</span>
     </header>
 
     <main>
@@ -32,7 +32,7 @@
           </div>
         </div>
 
-        <div class="demo-note" role="note"><span class="note-dot"></span><span><strong>Tryb testowy bez Supabase.</strong> Karty zawierają oznaczone grafiki demonstracyjne, a postęp zapisuje się tylko w tej przeglądarce. Prawdziwe zdjęcia dodamy później.</span></div>
+        <div class="demo-note" id="campaign-source-note" role="status"><span class="note-dot"></span><span id="campaign-source-text">Wczytywanie danych kampanii…</span></div>
 
         <div class="map-panel">
           <div class="map-panel-heading"><div><p class="eyebrow">ŚWIAT 01</p><h2>Odkryj, co jest prawdziwe</h2></div><span id="progress-label" class="progress-badge">0 / 6</span></div>
@@ -52,7 +52,7 @@
         <div class="play-heading"><div><h1 id="play-title">Rozpoznaj obraz</h1><p id="play-description" class="play-description">Przesuń w lewo: człowiek. W prawo: AI.</p></div><div class="play-hearts" id="play-hearts" aria-label="3 z 3 serc">♥ ♥ ♥</div></div>
         <div class="question-progress"><span id="play-counter">1 / 5</span><span id="play-timer" hidden>01:00</span></div>
         <div class="progress-track"><div id="play-progress-bar" class="progress-fill"></div></div>
-        <div class="demo-note demo-note--compact"><span class="note-dot"></span><span>Obrazy w tej wersji są <strong>oznaczonymi kartami do testowania mechaniki</strong>, nie fotografiami. Prawidłowa odpowiedź jest na karcie.</span></div>
+        <div class="demo-note demo-note--compact"><span class="note-dot"></span><span id="play-source-text">Obrazy demonstracyjne: nie są to prawdziwe fotografie. Odpowiedź jest na karcie.</span></div>
         <div class="swipe-area">
           <div id="swipe-card" class="swipe-card" tabindex="0" aria-label="Karta do oceny. Użyj strzałek w lewo lub w prawo.">
             <span id="swipe-human" class="swipe-stamp swipe-stamp--human" aria-hidden="true">CZŁOWIEK</span><span id="swipe-ai" class="swipe-stamp swipe-stamp--ai" aria-hidden="true">AI</span>
@@ -70,8 +70,8 @@
         <div class="result-actions"><button id="result-primary" class="primary-btn" type="button">Kontynuuj</button><button id="result-map" class="secondary-btn" type="button">Wróć do mapy</button></div>
       </section>
     </main>
-    <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span>Osobny projekt • dane lokalne</span></footer>
+    <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
-  <script type="module" src="./js/campaign-map.js?v=0.3"></script>
+  <script type="module" src="./js/campaign-map.js?v=0.4"></script>
 </body>
 </html>

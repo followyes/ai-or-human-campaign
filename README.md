@@ -4,7 +4,7 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Prototyp kampanii v0.3 (bez Supabase).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `campaign.html` (lub przez przycisk Kampania w `index.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
+**Prototyp kampanii v0.4 (Supabase opcjonalny).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `campaign.html` (lub przez przycisk Kampania w `index.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
 
 ## Uruchomienie i testy
 
@@ -17,17 +17,19 @@ npm run build
 
 Aby zobaczyć interfejs, uruchom lokalny serwer HTTP w folderze repozytorium (np. rozszerzeniem Live Server w VS Code). Otwieranie `index.html` poprzez `file://` może blokować moduły JS. Kampania działa bez Supabase na lokalnych zasobach. **Stare tryby Classic i Speed Run nie działają bez osobnego Supabase.** Do podglądu gry kampanijnej można otworzyć `campaign.html` przez lokalny serwer HTTP.
 
-## Osobny Supabase — potrzebny dopiero do wersji produkcyjnej
+## Osobny Supabase — odczyt zdjęć kampanii
 
 1. Utwórz NOWY projekt Supabase, niezależny od tego używanego przez oryginalną grę.
 2. Nie kopiuj produkcyjnego URL/klucza z oryginalnej wersji. `js/supabase-config.js` zawiera celowo puste pola.
 3. Nie dodawaj tajnych kluczy `service_role`, `sb_secret_*`, haseł ani prywatnych tokenów do plików publicznych.
-4. Najpierw przygotujemy schemat bazy / polityki RLS i nowy katalog zdjęć. Dopiero później podłączymy publiczny URL i `sb_publishable_*`. Obecna kampania nie wykonuje połączeń z Supabase.
+4. Utwórz schemat read-only według `SUPABASE_SQL/01_campaign.sql` z paczki aktualizacji (ten plik nie jest publikowany w repo).
+5. Po konfiguracji `projectUrl` i `publishableKey` w `js/supabase-config.js` kampania odczytuje publiczne przypisania. Dopóki nie ma **35 aktywnych obrazów (5×5 + 10)**, pokazuje wyraźny status oraz bezpiecznie pozostaje w DEMO.
+6. Postęp prawdziwej kampanii nadal jest lokalny, ale oddzielony od postępu wersji DEMO. Produkcyjny zapis postępu wymaga autoryzacji / serwera i jest kolejnym etapem.
 5. Kod zawiera dodatkową blokadę adresu projektu bazy oryginalnej gry.
 
 ## Wdrożenie
 
-Automatyczny workflow GitHub Pages **nie został przeniesiony** do tej kopii startowej. Włączymy publikację dopiero po skonfigurowaniu nowej bazy i przetestowaniu gry. Samo wgranie kodu do nowego repozytorium nie publikuje gry.
+Strona statyczna: GitHub → Settings → Pages → Deploy from a branch → `main` → `/(root)` → Save. Kampania: `/ai-or-human-campaign/campaign.html`. Można ją wdrożyć także w DEMO przed uzupełnieniem nowej bazy. Root `/` pokazuje jeszcze stary ekran trybów (Classic/Speed Run wymagają osobnego Supabase). Kod i dane publiczne są widoczne w przeglądarce; nie umieszczać sekretów.
 
 ## Dokumentacja i historia
 
