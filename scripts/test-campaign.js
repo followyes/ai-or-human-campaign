@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import {
-  STAGES, MAX_HEARTS, HEART_REGEN_MS, newProgress, sanitizeProgress,
+  STAGES, MAX_HEARTS, HEART_REGEN_MS, PREVIOUS_HEART_REGEN_MS, newProgress, sanitizeProgress, migratePreviousCooldown,
   regenerate, takeHeart, completeStage, isStageUnlocked, shuffleImages, formatTime
 } from "../js/campaign-core.js";
 
@@ -46,12 +46,22 @@ progress = regenerate(progress, t + HEART_REGEN_MS * 4);
 assert.equal(progress.hearts, MAX_HEARTS);
 assert.equal(progress.nextHeartAt, null);
 assert.deepEqual(sanitizeProgress({completed:99, hearts:-4, nextHeartAt:0}), {completed:6, hearts:0, nextHeartAt:null});
-assert.equal(formatTime(600_000), "10:00");
+assert.equal(HEART_REGEN_MS, 180_000, "heart recovery must last 3 minutes");
+assert.equal(formatTime(HEART_REGEN_MS), "03:00");
+const oldProgress = { completed: 3, hearts: 1, nextHeartAt: 1_000_000 + PREVIOUS_HEART_REGEN_MS };
+const migrated = migratePreviousCooldown(oldProgress);
+assert.equal(migrated.completed, 3, "migration preserves completed stages");
+assert.equal(migrated.hearts, 1, "migration preserves hearts");
+assert.equal(migrated.nextHeartAt, 1_000_000 + HEART_REGEN_MS);
+assert.equal(regenerate(migrated, 1_000_000 + HEART_REGEN_MS).hearts, 2);
 assert.equal(formatTime(500), "00:01");
 const html = readFileSync(resolve(root, "campaign.html"), "utf8");
 const landing = readFileSync(resolve(root, "index.html"), "utf8");
 assert.match(landing, /id="campaign-mode-link"/);
 assert.match(html, /id="path-stops"/);
 assert.match(html, /id="campaign-play-view"/);
-assert.doesNotMatch(readFileSync(resolve(root, "js/campaign-map.js"), "utf8"), /fetch\(|supabase\.co|sb_secret_|service_role/);
-console.log("PASS: Campaign demo data, unlocks, hearts, timer arithmetic and files");
+const campaignMapJS = readFileSync(resolve(root, "js/campaign-map.js"), "utf8");
+assert.doesNotMatch(campaignMapJS, /fetch\(|supabase\.co|sb_secret_|service_role/);
+assert.ok(campaignMapJS.includes('loseRun("Błędna odpowiedź — tracisz jedno serce i kończysz to podejście.", true);'), "a wrong answer must always finish the attempt");
+assert.doesNotMatch(campaignMapJS, /Spróbuj ponownie na tej karcie/, "no reattempt of same card after a mistake");
+console.log("PASS: Campaign stages, 3-minute hearts, legacy save migration and mistake ends run");

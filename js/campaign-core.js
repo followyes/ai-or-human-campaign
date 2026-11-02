@@ -1,6 +1,8 @@
 // Local Campaign prototype. No Supabase calls or secrets in this module.
 export const MAX_HEARTS = 3;
-export const HEART_REGEN_MS = 10 * 60 * 1000;
+export const HEART_REGEN_MS = 3 * 60 * 1000;
+export const PREVIOUS_HEART_REGEN_MS = 10 * 60 * 1000;
+export const HEART_REGEN_MIGRATION_KEY = "ai-or-human.campaign.prototype.v03.regen-migrated";
 export const BOSS_LIMIT_MS = 60 * 1000; // TEST VALUE: final boss time is not yet approved.
 export const STORAGE_KEY = "ai-or-human.campaign.prototype.v02";
 
@@ -36,6 +38,17 @@ export function sanitizeProgress(raw) {
   const nextHeartAt = hearts < MAX_HEARTS && Number.isFinite(raw.nextHeartAt) && raw.nextHeartAt > 0
     ? raw.nextHeartAt : null;
   return { completed, hearts, nextHeartAt };
+}
+
+// Existing v0.2 localStorage save data used a 10-minute first-heart deadline.
+// Shift that saved deadline without resetting unlocked stages or spent hearts.
+export function migratePreviousCooldown(raw) {
+  const progress = sanitizeProgress(raw);
+  return {
+    ...progress,
+    nextHeartAt: progress.nextHeartAt === null ? null
+      : progress.nextHeartAt - (PREVIOUS_HEART_REGEN_MS - HEART_REGEN_MS)
+  };
 }
 
 export function regenerate(raw, now = Date.now()) {

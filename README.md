@@ -4,7 +4,7 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Prototyp kampanii v0.2 (bez Supabase).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `campaign.html` (lub przez przycisk Kampania w `index.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 10 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
+**Prototyp kampanii v0.3 (bez Supabase).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `campaign.html` (lub przez przycisk Kampania w `index.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
 
 ## Uruchomienie i testy
 
@@ -37,7 +37,8 @@ Pełna dokumentacja projektu (AGENTS.md, ROADMAP.md, CHANGELOG.md, CONTINUE_IN_N
 
 - Zapisy w `localStorage` są lokalne dla przeglądarki i nieodporne na manipulacje; nie używać do produkcyjnej rywalizacji/rankingu.
 - Karty SVG to oznaczone dane demonstracyjne, **nie autentyczne zdjęcia** i nie nadają się na finalną pulę.
-- W obecnym demo po błędnej odpowiedzi gracz traci serce i może ponawiać **tę samą kartę**; po wyczerpaniu serc powtarza cały poziom. To zachowanie do zatwierdzenia w docelowej mechanice.
+- Każda błędna odpowiedź odbiera jedno serce i od razu kończy próbę. Następne podejście rozpoczyna ten sam poziom od pierwszej karty, z przetasowaną kolejnością; ukończone poziomy nie są cofane. Gdy serca spadną do zera, trzeba poczekać na regenerację (3 minuty na serce).
 - Boss ma testowy limit 60 sekund; przekroczenie odejmuje 1 serce i kończy próbę.
 - Wyjście z rozgrywki na mapę w połowie poziomu porzuca tę próbę; ukończone poziomy i serca pozostają zapisane.
-- Pierwsze testy automatyczne nie zastępują testów ręcznych w przeglądarce.
+- Interfejs kampanii jest dopasowany do jednego ekranu (bez przewijania na typowych rozdzielczościach PC i smartfonów). Przed produkcją sprawdzić także powiększenie przeglądarki i urządzenia docelowe.
+- Testy automatyczne i test w przeglądarce w trybie demonstracyjnym nie zastępują testów na docelowych urządzeniach.

@@ -1,6 +1,6 @@
 import {
-  STAGES, STORAGE_KEY, MAX_HEARTS, BOSS_LIMIT_MS,
-  newProgress, sanitizeProgress, regenerate, takeHeart,
+  STAGES, STORAGE_KEY, HEART_REGEN_MIGRATION_KEY, MAX_HEARTS, BOSS_LIMIT_MS,
+  newProgress, sanitizeProgress, migratePreviousCooldown, regenerate, takeHeart,
   completeStage, isStageUnlocked, shuffleImages, formatTime
 } from "./campaign-core.js";
 
@@ -16,8 +16,17 @@ const feedback = $("#play-feedback");
 const answerButtons = [$("#answer-human"), $("#answer-ai")];
 
 function restoreProgress() {
-  try { return regenerate(JSON.parse(localStorage.getItem(STORAGE_KEY))); }
-  catch { return newProgress(); }
+  try {
+    let stored = sanitizeProgress(JSON.parse(localStorage.getItem(STORAGE_KEY)));
+    // One-time conversion of a v0.2 ten-minute cooldown to the new three-minute rule.
+    // Keep the same storage key to preserve all completed levels and remaining hearts.
+    if (localStorage.getItem(HEART_REGEN_MIGRATION_KEY) !== "done") {
+      stored = migratePreviousCooldown(stored);
+      localStorage.setItem(HEART_REGEN_MIGRATION_KEY, "done");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    }
+    return regenerate(stored);
+  } catch { return newProgress(); }
 }
 let progress = restoreProgress();
 let run = null;
@@ -63,7 +72,7 @@ function setScreen(name) {
   playView.hidden = name !== "play";
   resultView.hidden = name !== "result";
   if (name === "map") renderMap();
-  window.scrollTo({ top: 0, behavior: "instant" });
+
 }
 
 function renderMap() {
@@ -126,7 +135,7 @@ function startStage(stage) {
   $("#play-stage-label").textContent = stage.isBoss ? "BOSS" : `POZIOM ${stage.id}`;
   $("#play-description").textContent = stage.isBoss
     ? "10 kart. Masz testowe 60 sekund na cały finał."
-    : "W lewo: człowiek. W prawo: AI. Poprawnie rozpoznaj 5 kart.";
+    : "W lewo: człowiek. W prawo: AI. Jeden błąd kończy podejście.";
   $("#play-timer").hidden = !stage.isBoss;
   setScreen("play");
   showCard();
@@ -157,7 +166,7 @@ function showCard() {
   redrawHearts();
 }
 
-function showResult(title, message, symbol, nextStage) {
+function showResult(title, message, symbol, nextStage, primaryLabel = "Kontynuuj") {
   clearRunTimers();
   run = null;
   $("#result-title").textContent = title;
@@ -165,7 +174,7 @@ function showResult(title, message, symbol, nextStage) {
   $("#result-symbol").textContent = symbol;
   const primary = $("#result-primary");
   primary.hidden = !nextStage;
-  primary.textContent = nextStage ? "Kontynuuj" : "";
+  primary.textContent = nextStage ? primaryLabel : "";
   primary.onclick = nextStage ? () => startStage(nextStage) : null;
   setScreen("result");
 }
@@ -185,9 +194,12 @@ function loseRun(message, deductHeart) {
   if (!run) return;
   if (deductHeart) progress = takeHeart(progress);
   save();
-  // The run is discarded. On restart its complete deck is reshuffled from the beginning.
+  // One mistake ends the attempt. The next run starts at image 1 with a reshuffled full deck.
+  const failedStage = run.stage;
   const noHearts = progress.hearts === 0;
-  showResult(noHearts ? "Koniec serc" : "Runda przegrana", `${message} ${noHearts ? "Poczekaj na serce i rozpocznij poziom od pierwszej karty." : "Wybierz ten poziom ponownie na mapie, aby zacząć od początku."}`, "♡", null);
+  showResult(noHearts ? "Koniec serc" : "Runda przegrana",
+    `${message} ${noHearts ? "Kolejne serce odnawia się za maksymalnie 3 minuty. Po regeneracji rozpocznij poziom od pierwszej karty." : "Ponowna próba zacznie się od pierwszej karty, w nowej kolejności."}`,
+    "♡", noHearts ? null : failedStage, "Spróbuj ponownie");
 }
 
 function answer(type) {
@@ -209,21 +221,8 @@ function answer(type) {
       if (run.index >= run.deck.length) winRun(); else showCard();
     }, 330);
   } else {
-    progress = takeHeart(progress);
-    save();
-    redrawHearts();
-    if (progress.hearts === 0) {
-      loseRun("Trzecia pomyłka zakończyła rundę.", false);
-    } else {
-      feedback.textContent = `Błędna odpowiedź. Utracono serce. Spróbuj ponownie na tej karcie.`;
-      feedback.className = "play-feedback is-error";
-      const referenceRun = run;
-      feedbackTimeout = window.setTimeout(() => {
-        if (run !== referenceRun || screen !== "play") return;
-        pendingAnswer = false;
-        answerButtons.forEach((button) => { button.disabled = false; });
-      }, 550);
-    }
+    // No second chance within the same attempt: lose one heart, then discard the run.
+    loseRun("Błędna odpowiedź — tracisz jedno serce i kończysz to podejście.", true);
   }
 }
 

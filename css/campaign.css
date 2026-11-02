@@ -5,3 +5,140 @@
 .play-view{max-width:640px;margin:0 auto;padding:35px 0 55px}.play-topline{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}.back-button{border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.04);color:#d2e3e1;padding:10px 13px;font-size:12px}.play-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.play-heading h1{font-size:clamp(25px,4vw,36px);line-height:1.15;letter-spacing:-.04em;margin:0 0 7px}.play-hearts{font-size:21px;color:#fa948e;white-space:nowrap;letter-spacing:.05em}.question-progress{display:flex;justify-content:space-between;color:var(--aqua);font-size:13px;font-weight:800;margin:24px 0 10px}.progress-track{height:6px;border-radius:99px;background:#2b4450;overflow:hidden;margin-bottom:22px}.progress-fill{height:100%;width:0;background:var(--aqua);border-radius:99px;transition:width .24s}.demo-note--compact{margin-bottom:18px}.swipe-area{display:grid;place-items:center;min-height:370px;overflow:hidden}.swipe-card{width:min(100%,380px);height:355px;position:relative;background:#1c3040;border:7px solid #2a4350;border-radius:24px;box-shadow:0 19px 45px rgba(0,0,0,.38);touch-action:pan-y;user-select:none;cursor:grab;transform:translateX(0) rotate(0);transition:transform .21s;overflow:hidden}.swipe-card.is-dragging{transition:none;cursor:grabbing}.swipe-card img{width:100%;height:100%;display:block;object-fit:cover;pointer-events:none}.swipe-stamp{position:absolute;z-index:2;top:25px;padding:8px 13px;border:4px solid;border-radius:9px;font-size:20px;font-weight:950;letter-spacing:.04em;opacity:0;transform:rotate(-12deg);pointer-events:none}.swipe-stamp--human{left:14px;color:#a9e5f5;border-color:#a9e5f5}.swipe-stamp--ai{right:14px;color:#b6f7c7;border-color:#b6f7c7;transform:rotate(12deg)}.play-feedback{text-align:center;font-size:13px;color:#c9d7db;min-height:24px;margin:18px 0 20px}.play-feedback.is-error{color:#ffc0b9}.play-feedback.is-success{color:#a2efcb}.answer-actions{display:flex;gap:14px}.answer-btn,.primary-btn,.secondary-btn{border-radius:13px;font-size:14px;font-weight:900;min-height:53px;padding:12px 20px;letter-spacing:.04em}.answer-btn{flex:1;background:#1a3442;color:#bbebf2;border:1px solid #477687}.answer-ai{color:#9de9cb;border-color:#4d9c85;background:#153a35}.answer-btn:hover:not(:disabled){filter:brightness(1.16)}.answer-btn:disabled{opacity:.45}.result-view{text-align:center;max-width:560px;margin:0 auto;padding:110px 15px}.result-symbol{width:100px;height:100px;display:grid;place-items:center;margin:0 auto 32px;border-radius:30px;border:2px solid rgba(222,196,120,.5);background:#3b413b;color:#fae3a1;font-size:50px}.result-view h1{font-size:clamp(32px,5vw,52px);letter-spacing:-.05em;margin:12px 0}.result-description{color:#c0d0d0;line-height:1.65;min-height:60px}.result-actions{display:flex;flex-direction:column;gap:12px;margin:35px auto 0;max-width:310px}.primary-btn{border:0;background:var(--aqua);color:#183437}.secondary-btn{border:1px solid var(--line);color:#d7e6e4;background:#263947}
 @media(max-width:640px){.campaign-wrap{width:min(100% - 24px,940px)}.site-header{min-height:78px}.brand-mark{width:40px;height:40px}.edition-label{font-size:9px;padding:7px}.map-intro{display:block;padding:35px 7px 23px}.map-intro h1{font-size:34px}.lives-panel{margin-top:25px;display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left;gap:2px 12px;min-width:0;padding:13px 18px}.lives-panel .label{grid-column:1}.hearts{grid-column:2;grid-row:1 / span 2;font-size:22px}.recharge{grid-column:1}.demo-note{font-size:11px;padding:12px}.map-panel{border-radius:20px}.map-panel-heading{padding:22px 17px}.map-panel-heading h2{font-size:17px}.path-scroll{padding:10px 0 0}.journey{height:780px}.journey-line{height:100%}.path-stop{width:125px}.path-node{width:70px;height:70px;border-radius:22px}.path-node--boss{width:82px;height:82px}.path-node__symbol{font-size:23px}.path-node--available:after{right:-24px;font-size:8px}.path-stop__title{font-size:13px}.map-legend{gap:13px;font-size:10px;flex-wrap:wrap}.play-view{padding-top:24px}.play-heading h1{font-size:28px}.play-hearts{font-size:18px}.swipe-area{min-height:330px}.swipe-card{height:310px;width:min(100%,330px)}.answer-btn{font-size:12px}.site-footer{flex-direction:column;gap:7px}.result-view{padding-top:75px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.path-node,.swipe-card,.progress-fill{transition:none}}
+
+/* Campaign v0.3 — a single-screen layout. The previous 840px tall map forced scrolling.
+   The map and gameplay now share the available viewport height and scale their contents. */
+html,body{height:100%;height:100dvh;overflow:hidden}
+body{min-height:0}
+.campaign-wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.site-header{min-height:0;height:clamp(48px,7.4dvh,67px);flex:0 0 auto}
+.brand-mark{width:38px;height:38px;border-radius:11px;font-size:17px}
+.brand-type{font-size:13px}.brand-type small{font-size:7px;margin-top:4px}
+.edition-label{padding:6px 10px;font-size:9px}
+.campaign-wrap>main{display:flex;flex:1 1 0;min-height:0;overflow:hidden}
+.map-view,.play-view,.result-view{flex:1 1 0;min-height:0;min-width:0}
+.map-view{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:clamp(5px,1dvh,11px)}
+.map-intro{padding:clamp(7px,1.6dvh,17px) 0 0;gap:14px}
+.map-intro h1{font-size:clamp(23px,3.7vw,36px);margin:0 0 5px}
+.eyebrow{font-size:10px;margin:0 0 5px}
+.intro-description{font-size:12px;line-height:1.35}
+.lives-panel{min-width:176px;padding:8px 15px;border-radius:14px}
+.lives-panel .label{font-size:9px}.hearts{font-size:24px;margin:1px 0}.recharge{font-size:10px}
+.demo-note{padding:8px 12px;font-size:11px;line-height:1.3;margin:0;border-radius:10px}
+.note-dot{margin-top:4px}
+.map-panel{display:flex;flex-direction:column;min-height:0;border-radius:20px}
+.map-panel-heading{padding:9px 22px 8px;min-height:0;flex:0 0 auto}
+.map-panel-heading h2{font-size:17px}
+.progress-badge{font-size:11px;padding:6px 10px}
+.path-scroll{flex:1 1 0;min-height:0;overflow:hidden;padding:0 12px}
+.journey{height:100%;width:min(100%,520px);max-width:520px}
+.journey-line{height:100%}
+.path-stop{width:130px}
+.path-stop:nth-child(1){left:50%;top:10%}
+.path-stop:nth-child(2){left:71.2%;top:26%}
+.path-stop:nth-child(3){left:28%;top:42%}
+.path-stop:nth-child(4){left:70%;top:58%}
+.path-stop:nth-child(5){left:31.7%;top:74%}
+.path-stop:nth-child(6){left:61%;top:90%}
+.path-node{width:clamp(40px,min(6.5dvh,4.7vw),60px);height:clamp(40px,min(6.5dvh,4.7vw),60px);border-radius:18px;margin-bottom:5px;box-shadow:0 5px 0 #0a1620,0 9px 18px rgba(0,0,0,.19)}
+.path-node:hover:not(:disabled){box-shadow:0 8px 0 #0a1620,0 12px 21px rgba(0,0,0,.19)}
+.path-node--available{box-shadow:0 5px 0 #337e7f,0 10px 22px rgba(78,222,200,.13)}
+.path-node--completed{box-shadow:0 5px 0 #6e523a}
+.path-node--boss{width:clamp(45px,min(7dvh,5.1vw),66px);height:clamp(45px,min(7dvh,5.1vw),66px);border-radius:20px}
+.path-node__symbol{font-size:clamp(17px,2.5dvh,24px)}
+.path-node--available:after{right:-32px;top:-9px;padding:4px 6px;font-size:8px}
+.path-stop__title{font-size:clamp(10px,1.45dvh,12px)}
+.path-stop__subtitle{font-size:9px;margin-top:1px;white-space:nowrap}
+.map-legend{padding:7px 12px;gap:17px;font-size:10px;flex:0 0 auto}
+.footnote{margin:0 0 3px;font-size:10px;line-height:1.25}
+.site-footer{min-height:0;flex:0 0 auto;padding:5px 0 6px;font-size:9px}
+/* The entire quiz, including swipe card and buttons, remains in the same viewport. */
+.play-view{display:flex;flex-direction:column;max-width:650px;padding:clamp(5px,1.5dvh,12px) 0 8px;overflow:hidden}
+.play-topline{margin:0 0 7px;flex:0 0 auto}
+.back-button{padding:7px 10px}
+.play-heading{flex:0 0 auto}
+.play-heading h1{font-size:clamp(19px,3dvh,28px);margin:0 0 2px}
+.play-description{font-size:11px;line-height:1.3}
+.play-hearts{font-size:19px}
+.question-progress{flex:0 0 auto;margin:9px 0 4px;font-size:11px}
+.progress-track{flex:0 0 auto;height:5px;margin-bottom:7px}
+.demo-note--compact{margin:0 0 5px;padding:6px 10px;font-size:10px}
+.swipe-area{flex:1 1 0;min-height:0;overflow:hidden;display:grid;place-items:center}
+.swipe-card{height:min(100%,420px);width:auto;max-width:100%;aspect-ratio:1.06 / 1;border-width:5px;border-radius:19px;touch-action:none}
+.swipe-stamp{top:13px;font-size:14px;border-width:3px}
+.play-feedback{flex:0 0 auto;font-size:11px;min-height:15px;margin:6px 0}
+.answer-actions{flex:0 0 auto;gap:10px}
+.answer-btn{min-height:40px;padding:7px 12px;font-size:12px}
+.result-view{display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:560px;margin:0 auto;padding:5px 12px;text-align:center;overflow:hidden}
+.result-symbol{width:clamp(58px,10dvh,90px);height:clamp(58px,10dvh,90px);font-size:clamp(28px,5dvh,46px);border-radius:22px;margin:0 auto 12px;flex:0 0 auto}
+.result-view h1{font-size:clamp(23px,4.5dvh,41px);margin:7px 0}
+.result-description{font-size:clamp(12px,1.8dvh,15px);line-height:1.45;min-height:0;margin:6px 0}
+.result-actions{width:100%;max-width:290px;gap:8px;margin:15px auto 0}
+.result-actions button{min-height:41px;padding:9px 12px;font-size:12px}
+@media(max-width:640px){
+ .campaign-wrap{width:calc(100% - 22px)}
+ .site-header{height:clamp(46px,7dvh,57px)}
+ .brand-mark{width:32px;height:32px;font-size:14px}
+ .brand-type{font-size:10px}.brand-type small{font-size:6px;letter-spacing:.17em}
+ .edition-label{font-size:8px;padding:5px 7px}
+ .map-view{gap:5px}
+ .map-intro{display:flex;align-items:center;gap:6px;padding:7px 0 0}
+ .map-intro h1{font-size:clamp(19px,5vw,27px);line-height:1.08;margin-bottom:0}
+ .map-intro .intro-description{display:none}
+ .lives-panel{min-width:118px;margin:0;padding:7px 8px;border-radius:11px;display:block;text-align:center}
+ .lives-panel .label{font-size:8px;letter-spacing:.06em}
+ .lives-panel .hearts{font-size:19px;margin:2px 0}
+ .lives-panel .recharge{font-size:8px}
+ .demo-note{padding:6px 9px;font-size:9px;line-height:1.2}
+ .map-panel{border-radius:13px}
+ .map-panel-heading{padding:7px 12px}
+ .map-panel-heading h2{font-size:14px}
+ .map-panel-heading .eyebrow{font-size:8px;margin-bottom:3px}
+ .progress-badge{padding:5px 8px;font-size:9px}
+ .path-scroll{padding:0 3px}
+ .path-stop{width:105px}
+ .path-node{width:clamp(40px,6.3dvh,52px);height:clamp(40px,6.3dvh,52px);border-radius:13px;margin-bottom:3px}
+ .path-node--boss{width:clamp(43px,6.9dvh,56px);height:clamp(43px,6.9dvh,56px);border-radius:14px}
+ .path-node__symbol{font-size:19px}
+ .path-stop__title{font-size:10px}
+ .path-stop__subtitle{display:none}
+ .path-node--available:after{right:-23px;padding:3px 4px;font-size:7px}
+ .map-legend{padding:6px 2px;gap:12px;font-size:9px;flex-wrap:nowrap}
+ .footnote{font-size:9px;margin-bottom:5px}
+ .site-footer{display:none}
+ .play-view{padding:5px 0 9px}
+ .play-topline{margin-bottom:5px}
+ .play-heading h1{font-size:21px}
+ .play-description{font-size:10px}
+ .play-hearts{font-size:17px}
+ .question-progress{margin:6px 0 4px}
+ .progress-track{margin-bottom:5px}
+ .demo-note--compact{font-size:9px;margin-bottom:5px}
+ .swipe-card{max-width:100%;aspect-ratio:1.03/1;border-width:4px;border-radius:15px}
+ .answer-btn{font-size:11px}
+ .result-view{padding:5px}
+}
+@media(max-height:650px){
+ .map-intro .intro-description{display:none}
+ .map-intro{padding-top:4px}
+ .demo-note{padding:5px 9px}
+ .map-panel-heading{padding-top:5px;padding-bottom:5px}
+ .map-legend{padding:4px}
+ .path-stop__subtitle{display:none}
+ .path-node{width:clamp(36px,6.2dvh,50px);height:clamp(36px,6.2dvh,50px)}
+ .path-node--boss{width:clamp(40px,6.8dvh,55px);height:clamp(40px,6.8dvh,55px)}
+ .site-footer{display:none}
+ .play-description{display:none}
+ .demo-note--compact{font-size:9px}
+}
+@media(max-height:475px){
+ .map-intro .eyebrow,.demo-note:not(.demo-note--compact),.map-legend,.footnote{display:none}
+ .map-view{grid-template-rows:auto minmax(0,1fr)}
+ .path-stop__title{font-size:9px}
+ .path-node{width:34px;height:34px;margin-bottom:2px}
+ .path-node--boss{width:37px;height:37px}
+ .path-node__symbol{font-size:14px}
+ .play-heading h1{font-size:17px}
+ .demo-note--compact{display:none}
+ .result-symbol{margin-bottom:3px}
+}
