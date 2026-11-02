@@ -58,8 +58,19 @@ assert.equal(formatTime(500), "00:01");
 const html = readFileSync(resolve(root, "campaign.html"), "utf8");
 const landing = readFileSync(resolve(root, "classic.html"), "utf8");
 const home = readFileSync(resolve(root, "index.html"), "utf8");
-assert.equal(home, html, "the main URL must open campaign instead of the old mode selector");
-assert.match(landing, /id="campaign-mode-link"/);
+assert.equal(home, landing, "root and /classic.html must show the same welcome screen");
+assert.match(home, /id="campaign-mode-link" href="\.\/campaign\.html"/,
+  "the only welcome-screen CTA must navigate to campaign.html (not root)");
+assert.doesNotMatch(home, /id="path-stops"/,
+  "the map must not load on the root welcome screen");
+assert.match(home, /id="classic-mode-button"[^>]*hidden[^>]*disabled/,
+  "Classic must remain unavailable from the welcome screen");
+assert.match(home, /id="speed-run-mode-button"[^>]*hidden[^>]*disabled/,
+  "Speed Run must remain unavailable from the welcome screen");
+const mainURL = new URL("https://followyes.github.io/ai-or-human-campaign/");
+const mapURL = new URL("./campaign.html", mainURL);
+assert.equal(mapURL.pathname, "/ai-or-human-campaign/campaign.html",
+  "CTA must resolve correctly under GitHub Pages repository prefix");
 assert.match(html, /id="path-stops"/);
 assert.match(html, /id="campaign-play-view"/);
 const campaignMapJS = readFileSync(resolve(root, "js/campaign-map.js"), "utf8");
