@@ -22,7 +22,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-dark.webp">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-light.webp">
-  <link rel="stylesheet" href="./css/style.css?v=1.7.1b-r2-4">
+  <link rel="stylesheet" href="./css/style.css?v=0.4.2">
 </head>
 <body data-public-view="mode-select">
   <div class="game-atmosphere" id="game-atmosphere" aria-hidden="true">
@@ -148,16 +148,16 @@
           <div class="mode-select-brand">
             <p class="eyebrow mode-select-eyebrow">AI OR HUMAN</p>
             <span class="cosmic-divider" aria-hidden="true"><span></span></span>
-            <h1 class="pre-game-display-title" id="mode-select-title">Wybierz tryb gry</h1>
+            <h1 class="pre-game-display-title" id="mode-select-title">Witaj w kampanii</h1>
           </div>
 
           <div class="game-mode-list" aria-label="Tryby gry">
-            <a class="game-mode-card campaign-mode-entry" id="campaign-mode-link" href="./campaign.html">
+            <a class="game-mode-card campaign-mode-entry" id="campaign-mode-link" href="./">
               <span class="game-mode-card__icon" aria-hidden="true">★</span>
-              <span class="game-mode-card__copy"><strong>Kampania <span class="campaign-entry-tag">NOWOŚĆ</span></strong><span>5 poziomów, boss i 3 serca • offline demo</span></span>
+              <span class="game-mode-card__copy"><strong>Kampania <span class="campaign-entry-tag">GRAJ</span></strong><span>5 poziomów, boss i 3 serca</span></span>
               <span class="game-mode-card__arrow" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="m9 5 7 7-7 7"></path></svg></span>
             </a>
-            <button class="game-mode-card" id="classic-mode-button" type="button" data-game-mode="classic">
+            <button class="game-mode-card" id="classic-mode-button" type="button" data-game-mode="classic" hidden disabled tabindex="-1" aria-hidden="true">
               <span class="game-mode-card__icon" aria-hidden="true">
                 <svg viewBox="0 0 32 32" focusable="false">
                   <path d="M18.2 2.7 7.8 17h7.1l-1.2 12.3L24.3 14h-7.2l1.1-11.3Z"></path>
@@ -171,7 +171,7 @@
                 <svg viewBox="0 0 24 24" focusable="false"><path d="m9 5 7 7-7 7"></path></svg>
               </span>
             </button>
-            <button class="game-mode-card" id="speed-run-mode-button" type="button" data-game-mode="speed-run">
+            <button class="game-mode-card" id="speed-run-mode-button" type="button" data-game-mode="speed-run" hidden disabled tabindex="-1" aria-hidden="true">
               <span class="game-mode-card__icon" aria-hidden="true">
                 <svg viewBox="0 0 32 32" focusable="false"><circle cx="16" cy="17" r="11" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M16 9v8l5 3M12 2h8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
               </span>
@@ -375,6 +375,6 @@
     </section>
   </div>
 
-  <script type="module" src="./js/game.js?v=1.7.1b-r2-4"></script>
+  <script type="module" src="./js/game.js?v=0.4.2"></script>
 </body>
 </html>

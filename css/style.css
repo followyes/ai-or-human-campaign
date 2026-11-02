@@ -2822,3 +2822,20 @@ body.is-profile-dialog-open { overflow: hidden; }
 .campaign-mode-entry:focus-visible { outline: 3px solid #31ac96; outline-offset: 3px; }
 .campaign-mode-entry .game-mode-card__icon { font-size: 1.6rem; }
 .campaign-entry-tag { font-size: .62rem; padding: .22em .5em; border-radius: 999px; color: #0e6159; background: #b9efe0; vertical-align: middle; margin-left: .25rem; letter-spacing: .07em; }
+
+
+/* Campaign v0.4.2 — w menu tylko Kampania; stare tryby zachowane w kodzie, ale niewidoczne. */
+#mode-select-panel .game-mode-card[hidden] { display: none !important; }
+body[data-public-view="mode-select"] {
+  background:
+    radial-gradient(ellipse 68% 61% at 14% 20%, #ead6f0 0%, transparent 74%),
+    radial-gradient(ellipse 50% 62% at 87% 78%, #f5d9d3 0%, transparent 75%),
+    linear-gradient(145deg, #e6ebf3 0%, #f9ede8 100%);
+}
+:root[data-theme="dark"] body[data-public-view="mode-select"] {
+  background:
+    radial-gradient(ellipse 68% 61% at 14% 20%, rgba(146, 93, 213, .29) 0%, transparent 74%),
+    radial-gradient(ellipse 50% 62% at 87% 78%, rgba(210, 118, 150, .19) 0%, transparent 75%),
+    linear-gradient(145deg, #141727 0%, #281b36 100%);
+}
+body[data-public-view="mode-select"] .game-atmosphere { display: none; }

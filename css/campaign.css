@@ -142,3 +142,15 @@ body{min-height:0}
  .demo-note--compact{display:none}
  .result-symbol{margin-bottom:3px}
 }
+
+
+/* Campaign v0.4.2 — tymczasowy, abstrakcyjny placeholder tła. */
+body {
+  background:
+    radial-gradient(ellipse 66% 56% at 16% 15%, rgba(143, 99, 207, .26) 0%, transparent 75%),
+    radial-gradient(ellipse 58% 65% at 92% 84%, rgba(230, 132, 155, .15) 0%, transparent 77%),
+    linear-gradient(155deg, #111628 0%, #221c38 52%, #102431 100%);
+  background-attachment: fixed;
+}
+.ambient-a { background: #b66bdd; opacity: .12; }
+.ambient-b { background: #e49cb3; opacity: .1; }
