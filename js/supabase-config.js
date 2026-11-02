@@ -9,5 +9,5 @@
  */
 export const SUPABASE_PUBLIC_CONFIG = Object.freeze({
   projectUrl: "https://znufnobbpiybgkhympho.supabase.co",
-  publishableKey: "sb_publishable_EBXsczmSczd-eYJQt7tJ5g_XjDcMK8nS"
+  publishableKey: "sb_publishable_EBXsczmSczd-eYJQt7tJ5g_XjDcMK8n"
 });
