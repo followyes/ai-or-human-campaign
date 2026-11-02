@@ -58,6 +58,6 @@ const ui = await readFile(new URL("../js/admin-results-ui.js", import.meta.url),
 assert.ok(ui.includes("name.textContent = record.player_name"), "public names must use textContent");
 assert.ok(!ui.includes("innerHTML"), "no untrusted HTML injection");
 assert.ok(html.includes('id="admin-workspace"'));
-const game = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const game = await readFile(new URL("../classic.html", import.meta.url), "utf8");
 assert.ok(game.includes('id="player-name"') && !game.includes('profile-dialog__eyebrow'), "profile dialog compact, controls preserved");
 console.log("R2 TEST PASS — server query filters & IDs, paging, RPC, access failures, DOM contracts, compact profile");

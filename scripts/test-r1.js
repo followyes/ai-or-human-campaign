@@ -123,7 +123,7 @@ assert.equal((await noStorageOutbox.retryAll()).pending, 0);
 // Repository tests must run on a clean GitHub checkout. SQL lives in
 // OUTSIDE_REPO by design; its strict structural audit runs separately with
 // OUTSIDE_REPO/QA/verify-r1-sql.mjs before applying the migration.
-const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const html = await readFile(new URL("../classic.html", import.meta.url), "utf8");
 const game = await readFile(new URL("../js/game.js", import.meta.url), "utf8");
 assert.ok(html.includes('id="change-player-button"') && html.includes('id="local-player-list"'));
 assert.ok(html.includes('id="result-accuracy"') && html.includes('id="result-save-status"'));

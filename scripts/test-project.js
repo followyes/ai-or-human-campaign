@@ -660,7 +660,7 @@ async function testSeparateStreakCelebration() {
 }
 
 async function copyRuntimeFixture(targetRoot) {
-  for (const entry of ["index.html", "campaign.html", "css", "js", "admin", "assets"]) {
+  for (const entry of ["index.html", "campaign.html", "classic.html", "css", "js", "admin", "assets"]) {
     await fs.cp(path.join(projectRoot, entry), path.join(targetRoot, entry), { recursive: true });
   }
 }
@@ -2996,6 +2996,7 @@ async function testSupabaseOnlyBuild() {
   const result = await buildSite({ projectRoot: tempRoot });
   assert.equal(result.contentSource, "supabase");
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "index.html")));
+  assert.ok(await fs.stat(path.join(tempRoot, "dist", "classic.html")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "admin", "index.html")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "admin", "admin.js")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "js", "content-source.js")));
@@ -3453,7 +3454,7 @@ async function testResultCelebrationLifecycle() {
 }
 
 async function testSourceContracts() {
-  const html = await fs.readFile(path.join(projectRoot, "index.html"), "utf8");
+  const html = await fs.readFile(path.join(projectRoot, "classic.html"), "utf8");
   const css = await fs.readFile(path.join(projectRoot, "css", "style.css"), "utf8");
   const game = await fs.readFile(path.join(projectRoot, "js", "game.js"), "utf8");
   const themeControllerSource = await fs.readFile(path.join(projectRoot, "js", "theme-controller.js"), "utf8");

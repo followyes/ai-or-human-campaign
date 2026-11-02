@@ -4,7 +4,7 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Prototyp kampanii v0.4 (Supabase opcjonalny).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `campaign.html` (lub przez przycisk Kampania w `index.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
+**Prototyp kampanii v0.4 (Supabase opcjonalny).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Nowy tryb **Kampania** dostępny jest pod `index.html` w katalogu głównym oraz pod `campaign.html` (lub przez przycisk Kampania w `classic.html`). Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
 
 ## Uruchomienie i testy
 
@@ -29,7 +29,7 @@ Aby zobaczyć interfejs, uruchom lokalny serwer HTTP w folderze repozytorium (np
 
 ## Wdrożenie
 
-Strona statyczna: GitHub → Settings → Pages → Deploy from a branch → `main` → `/(root)` → Save. Kampania: `/ai-or-human-campaign/campaign.html`. Można ją wdrożyć także w DEMO przed uzupełnieniem nowej bazy. Root `/` pokazuje jeszcze stary ekran trybów (Classic/Speed Run wymagają osobnego Supabase). Kod i dane publiczne są widoczne w przeglądarce; nie umieszczać sekretów.
+Strona statyczna: GitHub → Settings → Pages → Deploy from a branch → `main` → `/(root)` → Save. Kampania: `/ai-or-human-campaign/` (również `/ai-or-human-campaign/campaign.html`). Można ją wdrożyć także w DEMO przed uzupełnieniem nowej bazy. Stary ekran trybów jest dostępny pod `/ai-or-human-campaign/classic.html` (Classic/Speed Run wymagają osobnego Supabase). Kod i dane publiczne są widoczne w przeglądarce; nie umieszczać sekretów.
 
 ## Dokumentacja i historia
 
