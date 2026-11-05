@@ -44,3 +44,13 @@ Pełna dokumentacja projektu (AGENTS.md, ROADMAP.md, CHANGELOG.md, CONTINUE_IN_N
 - Wyjście z rozgrywki na mapę w połowie poziomu porzuca tę próbę; ukończone poziomy i serca pozostają zapisane.
 - Interfejs kampanii jest dopasowany do jednego ekranu (bez przewijania na typowych rozdzielczościach PC i smartfonów). Przed produkcją sprawdzić także powiększenie przeglądarki i urządzenia docelowe.
 - Testy automatyczne i test w przeglądarce w trybie demonstracyjnym nie zastępują testów na docelowych urządzeniach.
+
+
+## Panel administratora
+
+Panel jest dostępny pod `/admin/` w obrębie nowej domeny GitHub Pages.
+Korzysta wyłącznie z nowego projektu Supabase skonfigurowanego w `js/supabase-config.js`.
+Przed pierwszym logowaniem administrator musi uruchomić instrukcję SQL dostarczoną
+oddzielnie (poza repozytorium) i przypisać rolę do konta Supabase Auth.
+Uwaga: zapis wyników kampanii działa obecnie lokalnie w przeglądarce; zakładka
+„Wyniki” panelu nie odzwierciedla jeszcze postępów tej kampanii.

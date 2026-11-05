@@ -1127,3 +1127,6 @@ h2 {
   .results-row { padding: 10px; gap: 8px; }
   .results-pager button { padding-inline: 9px; }
 }
+
+/* Campaign v0.5: the original admin layout is retained; show safety guidance. */
+.campaign-safety-note { font-size: 0.8rem; line-height: 1.45; color: #536477; margin: .65rem 0; }

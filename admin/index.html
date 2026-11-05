@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow, noarchive">
   <title>AI or Human — Admin</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./admin.css">
+  <link rel="stylesheet" href="./admin.css?v=0.5.0">
 </head>
 <body>
   <main class="admin-shell">
@@ -140,6 +140,7 @@
               </div>
             </div>
 
+            <p class="campaign-safety-note">Zdjęcia przypisane do aktywnych poziomów są chronione przed usunięciem i przeniesieniem.</p>
             <p class="inventory-status" id="inventory-status" role="status" aria-live="polite"></p>
             <div class="inventory-grid" id="inventory-grid"></div>
           </section>
@@ -168,6 +169,7 @@
             </label>
             <button type="button" class="admin-secondary-button compact-button results-reset" id="results-reset">Wyczyść filtry</button>
           </form>
+          <p class="campaign-safety-note">Wyniki kampanii nie są jeszcze wysyłane na serwer. Ta zakładka pozostanie pusta, dopóki nie włączymy zapisu wyników w Supabase.</p>
           <p id="results-status" class="results-status" role="status" aria-live="polite">Wybierz zakładkę Wyniki, aby załadować historię.</p>
           <div class="results-scroll" id="results-scroll">
             <div class="results-head" aria-hidden="true"><span>Gracz</span><span>Wynik</span><span>Zakończenie / zapis</span><span>Powiązania i akcje</span></div>
@@ -190,6 +192,6 @@
     </section>
   </main>
 
-  <script type="module" src="./admin.js"></script>
+  <script type="module" src="./admin.js?v=0.5.0"></script>
 </body>
 </html>

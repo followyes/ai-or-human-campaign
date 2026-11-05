@@ -29,6 +29,7 @@ import { DeleteDrainCoordinator } from "../js/delete-queue.js";
 import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js";
 import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js";
 import { AdminResultsPanel } from "../js/admin-results-ui.js";
+import { assertCampaignPhotoCanChange } from "../js/campaign-admin-guard.js";
 
 const adminCard = document.querySelector("#admin-card");
 const tabLibrary = document.querySelector("#tab-library");
@@ -156,7 +157,8 @@ function createSingleDeleteStats() {
   return {
     deletedCount: 0,
     failedCount: 0,
-    reconcileFailed: false
+    reconcileFailed: false,
+    protectedCount: 0
   };
 }
 
@@ -669,8 +671,11 @@ function renderInventory() {
 
     const detail = document.createElement("p");
     detail.className = "inventory-detail";
+    const dimensions = Number.isFinite(Number(row.width)) && Number(row.width) > 0 &&
+      Number.isFinite(Number(row.height)) && Number(row.height) > 0
+      ? `${row.width}×${row.height}` : "Wymiary nieznane";
     detail.textContent =
-      `${row.width}×${row.height} · ${formatBytes(row.file_size_bytes)} · ${formatInventoryDate(row.created_at)}`;
+      `${dimensions} · ${formatBytes(row.file_size_bytes)} · ${formatInventoryDate(row.created_at)}`;
 
     body.append(meta, name, detail);
     card.append(imageWrap, actionButton, body);
@@ -737,6 +742,7 @@ async function reconcileSingleDeleteAuthority() {
 
 async function processSingleDeleteItem(image) {
   await refreshCurrentSessionForMutation();
+  await assertCampaignPhotoCanChange({ session: currentSession, image });
   await deleteGameImage({
     session: currentSession,
     image
@@ -771,8 +777,9 @@ const singleDeleteCoordinator = new DeleteDrainCoordinator({
     inventoryRows = inventoryRows.filter((row) => row.id !== image.id);
     renderInventory();
   },
-  onItemFailure: (image) => {
+  onItemFailure: (image, error) => {
     singleDeleteStats.failedCount += 1;
+    if (error?.code === "CAMPAIGN_PHOTO_PROTECTED") singleDeleteStats.protectedCount += 1;
     deletingIds.delete(image.id);
     renderInventory();
   },
@@ -790,11 +797,12 @@ const singleDeleteCoordinator = new DeleteDrainCoordinator({
     setDeleteBusy(false);
     renderInventory();
 
-    const { deletedCount, failedCount, reconcileFailed } = singleDeleteStats;
+    const { deletedCount, failedCount, reconcileFailed, protectedCount } = singleDeleteStats;
     if (failedCount > 0 || reconcileFailed) {
       const parts = [];
       if (deletedCount > 0) parts.push(`Usunięto ${deletedCount}.`);
       if (failedCount > 0) parts.push(`Nie udało się usunąć ${failedCount}.`);
+      if (protectedCount) parts.push(`Chronione zdjęcia kampanii: ${protectedCount}.`);
       if (reconcileFailed) parts.push("Nie udało się odświeżyć biblioteki.");
       setInventoryStatus(parts.join(" "), { error: true });
     } else if (deletedCount > 0) {
@@ -850,6 +858,7 @@ async function handleBulkDelete() {
   let deletedCount = 0;
   const failedIds = new Set();
   let sessionFailed = false;
+  let protectedCount = 0;
 
   try {
     for (let index = 0; index < selectedRows.length; index += 1) {
@@ -860,6 +869,7 @@ async function handleBulkDelete() {
 
       try {
         await refreshCurrentSessionForMutation();
+        await assertCampaignPhotoCanChange({ session: currentSession, image });
 
         await deleteGameImage({
           session: currentSession,
@@ -885,6 +895,7 @@ async function handleBulkDelete() {
         }
 
         failedIds.add(image.id);
+        if (error?.code === "CAMPAIGN_PHOTO_PROTECTED") protectedCount += 1;
       }
     }
 
@@ -903,7 +914,8 @@ async function handleBulkDelete() {
 
     if (failedIds.size > 0) {
       setInventoryStatus(
-        `Usunięto ${deletedCount} z ${selectedRows.length}. Nie udało się usunąć ${failedIds.size}.`,
+        `Usunięto ${deletedCount} z ${selectedRows.length}. Nie udało się usunąć ${failedIds.size}.` +
+          (protectedCount ? ` Chronione zdjęcia kampanii: ${protectedCount}.` : ""),
         { error: true }
       );
     } else {
@@ -938,6 +950,7 @@ async function handleBulkMove(targetClass) {
     const result = await runSequentialMoveBatch(selectedRows, targetClass, {
       moveItem: async (image, destinationClass) => {
         await refreshCurrentSessionForMutation();
+        await assertCampaignPhotoCanChange({ session: currentSession, image });
         return moveGameImageToClass({
           session: currentSession,
           image,
@@ -974,6 +987,8 @@ async function handleBulkMove(targetClass) {
     if (result.failedCount > 0 || warningCount > 0) {
       const parts = [`Przeniesiono ${result.movedCount} z ${result.attemptedCount}.`];
       if (result.failedCount > 0) parts.push(`Nie udało się przenieść ${result.failedCount}.`);
+      const protectedCount = result.failures.filter(({ error }) => error?.code === "CAMPAIGN_PHOTO_PROTECTED").length;
+      if (protectedCount) parts.push(`Chronione zdjęcia kampanii: ${protectedCount}.`);
       if (warningCount > 0) parts.push(`Nie udało się posprzątać ${warningCount} starych plików.`);
       setInventoryStatus(parts.join(" "), { error: true });
     } else {
