@@ -6,7 +6,7 @@ const html = readFileSync(new URL('../campaign.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/campaign.css', import.meta.url), 'utf8');
 assert.match(html,/id="sound-toggle"[^>]*aria-pressed="true"/, 'accessible persistent sound control exists');
 assert.match(js,/sounds\.play\(correct \? "success" : "failure"\)/, 'different sounds for different answers');
-assert.match(js,/ANS(?:WER)?_EFFECT_MS = 980/, 'answer animation has a visible duration');
+assert.match(js,/ANS(?:WER)?_EFFECT_MS = 1120/, 'answer animation has a visible duration');
 assert.match(js,/loseRun\("Błędna odpowiedź[^\n]+\n\s*}, ANSWER_EFFECT_MS\)/, 'loss appears after red animation');
 assert.match(css,/\.swipe-area\.is-feedback-success::before/, 'green glow behind image');
 assert.match(css,/\.swipe-area\.is-feedback-error::before/, 'red glow behind image');

@@ -24,9 +24,10 @@ const journey = $("#journey");
 const unlockBanner = $("#map-unlock-banner");
 const PATH_X = [50, 72, 29, 70, 32, 61];
 const UNLOCK_SCROLL_DELAY_MS = 950;
-const UNLOCK_SHAKE_MS = 1550;
-const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 1500;
-const ANSWER_EFFECT_MS = 980;
+const UNLOCK_SHAKE_MS = 1450;
+const UNLOCK_REVEAL_AT_MS = 740;
+const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 600;
+const ANSWER_EFFECT_MS = 1120;
 const sounds = createCampaignSounds();
 let currentStorageKey = STORAGE_KEY;
 let activeStages = STAGES;
@@ -35,6 +36,7 @@ let contentSource = "demo";
 let unlockState = null;
 let unlockTimeout = null;
 let unlockRevealTimeout = null;
+let unlockSwapTimeout = null;
 let layoutFrame = null;
 let initialMapCentered = false;
 
@@ -73,14 +75,20 @@ let run = null;
 let pendingAnswer = false;
 let screen = "map";
 let feedbackTimeout = null;
-const soundToggle = $("#sound-toggle");
+const soundToggles = [$("#sound-toggle"), $("#map-sound-toggle")];
 function refreshSoundToggle() {
   const enabled = sounds.isEnabled();
-  soundToggle.setAttribute("aria-pressed", String(enabled));
-  soundToggle.setAttribute("aria-label", enabled ? "Wyłącz dźwięki gry" : "Włącz dźwięki gry");
-  soundToggle.textContent = enabled ? "♫ Dźwięk: wł." : "♫ Dźwięk: wył.";
+  const action = enabled ? "Wyłącz dźwięki gry" : "Włącz dźwięki gry";
+  for (const toggle of soundToggles) {
+    toggle.setAttribute("aria-pressed", String(enabled));
+    toggle.setAttribute("aria-label", action);
+    toggle.title = action;
+    toggle.querySelector(".sound-toggle__icon").textContent = enabled ? "🔊" : "🔇";
+  }
 }
-soundToggle.addEventListener("click", () => { sounds.setEnabled(!sounds.isEnabled()); refreshSoundToggle(); });
+for (const toggle of soundToggles) {
+  toggle.addEventListener("click", () => { sounds.setEnabled(!sounds.isEnabled()); refreshSoundToggle(); });
+}
 refreshSoundToggle();
 
 function save() {
@@ -145,24 +153,30 @@ function renderMap() {
     item.dataset.stageUid = stage.uid || String(stage.id);
     item.style.setProperty('--stage-index', index);
     item.style.setProperty('--stage-x', `${PATH_X[index % PATH_X.length]}%`);
+    const uid = item.dataset.stageUid;
+    const revealLocked = unlockState?.nextUid === uid && unlockState.phase !== 'revealed';
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `path-node ${done ? 'path-node--completed' : unlocked ? 'path-node--available' : 'path-node--locked'}${stage.isBoss ? ' path-node--boss' : ''}`;
-    button.disabled = !unlocked || sourceLoading;
+    button.className = `path-node ${done ? 'path-node--completed' : (unlocked && !revealLocked) ? 'path-node--available' : 'path-node--locked'}${stage.isBoss ? ' path-node--boss' : ''}`;
+    button.disabled = !unlocked || sourceLoading || revealLocked || unlockState?.nextUid === uid;
     button.title = unlocked ? `Zagraj: ${stage.isBoss ? 'Boss' : `Poziom ${stage.id}`}` : 'Najpierw ukończ poprzednie poziomy';
-    button.setAttribute('aria-label', button.title);
-    button.innerHTML = `<span class="path-node__symbol" aria-hidden="true">${!unlocked ? '♙' : stage.isBoss ? '♛' : done ? '★' : stage.id}</span>`;
+    button.setAttribute('aria-label', revealLocked ? 'Trwa odblokowywanie poziomu' : button.title);
+    const symbol = document.createElement('span');
+    symbol.className = 'path-node__symbol';
+    symbol.setAttribute('aria-hidden', 'true');
+    symbol.textContent = revealLocked || !unlocked ? '🔒' : stage.isBoss ? '♛' : done ? '★' : String(stage.id);
+    button.append(symbol);
     button.addEventListener('click', () => startStage(stage));
     const label = document.createElement('span');
     label.className = 'path-stop__title';
     label.textContent = stage.isBoss ? 'BOSS' : `Poziom ${stage.id}`;
     const subtitle = document.createElement('span');
     subtitle.className = 'path-stop__subtitle';
-    subtitle.textContent = done ? 'Ukończony · zagraj ponownie' : !unlocked ? 'Zablokowany' : `${stage.images.length} kart · rozpocznij`;
-    if (unlockState?.completedUid === item.dataset.stageUid && unlockState.phase === 'animating') item.classList.add('path-stop--just-completed');
-    if (unlockState?.nextUid === item.dataset.stageUid) {
-      item.classList.add(unlockState.phase === 'animating' ? 'path-stop--unlock-animating' : 'path-stop--unlock-pending');
-      button.disabled = true; // No clicks until the lock reveal finishes.
+    subtitle.textContent = done ? 'Ukończony · zagraj ponownie' : revealLocked ? 'Odblokowywanie…' : !unlocked ? 'Zablokowany' : `${stage.images.length} kart · rozpocznij`;
+    if (unlockState?.completedUid === uid && unlockState.phase === 'animating') item.classList.add('path-stop--just-completed');
+    if (unlockState?.nextUid === uid) {
+      item.classList.add(unlockState.phase === 'waiting' ? 'path-stop--unlock-pending' : 'path-stop--unlock-animating');
+      if (unlockState.phase === 'revealed') item.classList.add('path-stop--unlock-revealed');
     }
     item.append(button, label, subtitle);
     stops.append(item);
@@ -221,14 +235,14 @@ function scrollMapToStage(uid, behavior = 'smooth', partnerUid = null) {
 }
 
 function showUnlockOnMap(stage, nextStage, wasCompleted) {
-  if (unlockTimeout !== null) clearTimeout(unlockTimeout);
-  if (unlockRevealTimeout !== null) clearTimeout(unlockRevealTimeout);
+  for (const id of [unlockTimeout, unlockRevealTimeout, unlockSwapTimeout]) if (id !== null) window.clearTimeout(id);
+  unlockTimeout = unlockRevealTimeout = unlockSwapTimeout = null;
   const newlyUnlocked = nextStage && !wasCompleted && !(contentSource === 'supabase'
     ? (progress.completedStageIds || []).includes(nextStage.uid)
     : nextStage.id <= progress.completed);
   unlockState = {
     completedUid: stage.uid || String(stage.id),
-    nextUid: newlyUnlocked ? nextStage.uid || String(nextStage.id) : null,
+    nextUid: newlyUnlocked ? (nextStage.uid || String(nextStage.id)) : null,
     phase: 'waiting'
   };
   const completedName = stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
@@ -239,7 +253,6 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
   clearRunTimers();
   run = null;
   setScreen('map');
-  // The map moves into place BEFORE the locked icon starts trembling.
   requestAnimationFrame(() => scrollMapToStage(
     unlockState.nextUid || unlockState.completedUid,
     'smooth',
@@ -249,28 +262,42 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
   unlockRevealTimeout = window.setTimeout(() => {
     if (screen !== 'map' || !unlockState) return;
     unlockState.phase = 'animating';
-    const completedItem = [...stops.children].find(item => item.dataset.stageUid === unlockState.completedUid);
+    // IMPORTANT: the next stage was rendered genuinely LOCKED in renderMap().
+    // Animation shakes the actual lock, not a pseudo-element covering an active button.
+    const item = [...stops.children].find(node => node.dataset.stageUid === unlockState.nextUid);
+    item?.classList.remove('path-stop--unlock-pending');
+    item?.classList.add('path-stop--unlock-animating');
+    const completedItem = [...stops.children].find(node => node.dataset.stageUid === unlockState.completedUid);
     completedItem?.classList.add('path-stop--just-completed');
-    if (unlockState.nextUid) {
-      const item = [...stops.children].find(node => node.dataset.stageUid === unlockState.nextUid);
-      item?.classList.remove('path-stop--unlock-pending');
-      item?.classList.add('path-stop--unlock-animating');
+    if (item) {
+      unlockSwapTimeout = window.setTimeout(() => {
+        if (screen !== 'map' || !unlockState || unlockState.nextUid !== item.dataset.stageUid) return;
+        unlockState.phase = 'revealed';
+        item.classList.add('path-stop--unlock-revealed');
+        const button = item.querySelector('.path-node');
+        const text = button?.querySelector('.path-node__symbol');
+        if (button && text) {
+          button.classList.remove('path-node--locked');
+          button.classList.add('path-node--available');
+          const corresponding = activeStages.find(s => (s.uid || String(s.id)) === item.dataset.stageUid);
+          text.textContent = corresponding?.isBoss ? '♛' : String(corresponding?.id || nextStage.id);
+          button.setAttribute('aria-label', 'Poziom odblokowany');
+        }
+        const subtitle = item.querySelector('.path-stop__subtitle');
+        if (subtitle) subtitle.textContent = 'Odblokowano!';
+        sounds.play('success');
+        unlockSwapTimeout = null;
+      }, reducedMotion ? 0 : UNLOCK_REVEAL_AT_MS);
     }
     unlockRevealTimeout = null;
   }, reducedMotion ? 0 : UNLOCK_SCROLL_DELAY_MS);
   unlockTimeout = window.setTimeout(() => {
     unlockState = null;
     unlockBanner.hidden = true;
-    stops.querySelectorAll('.path-stop--just-completed, .path-stop--unlock-pending, .path-stop--unlock-animating').forEach(item => {
-      item.classList.remove('path-stop--just-completed', 'path-stop--unlock-pending', 'path-stop--unlock-animating');
-      const button = item.querySelector('button');
-      if (button && !sourceLoading) button.disabled = false;
-    });
     unlockTimeout = null;
     if (screen === 'map') renderMap();
-    // Refresh levels only after the reveal so its animation is never interrupted.
     if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
-  }, reducedMotion ? 800 : UNLOCK_ANIMATION_MS);
+  }, reducedMotion ? 850 : UNLOCK_ANIMATION_MS);
 }
 
 // Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
@@ -309,12 +336,37 @@ mapScroller.addEventListener('click', event => {
 mapScroller.addEventListener('dragstart', event => event.preventDefault());
 window.addEventListener('resize', requestJourneyLine);
 
+function clearSwipeVisual() {
+  card.style.removeProperty('--drag-blur');
+  card.style.removeProperty('--drag-offset');
+  card.style.removeProperty('--drag-color-opacity');
+  card.removeAttribute('data-swipe');
+  card.style.transform = '';
+  $("#swipe-human").style.opacity = '0';
+  $("#swipe-ai").style.opacity = '0';
+}
+
+function applySwipeVisual(dx) {
+  const amount = Math.min(1, Math.abs(dx) / 130);
+  const direction = dx < 0 ? 'human' : dx > 0 ? 'ai' : null;
+  if (!direction) { clearSwipeVisual(); return; }
+  card.dataset.swipe = direction;
+  // Image blurs progressively with horizontal travel; colored streak follows the chosen side.
+  card.style.setProperty('--drag-blur', `${(amount * 10.5).toFixed(1)}px`);
+  card.style.setProperty('--drag-offset', `${(dx * .09).toFixed(1)}px`);
+  card.style.setProperty('--drag-color-opacity', String((amount * .85).toFixed(2)));
+  card.style.transform = `translateX(${Math.max(-140, Math.min(140, dx))}px) rotate(${(dx * .042).toFixed(2)}deg)`;
+  $("#swipe-human").style.opacity = direction === 'human' ? String(Math.min(1, amount * 1.7)) : '0';
+  $("#swipe-ai").style.opacity = direction === 'ai' ? String(Math.min(1, amount * 1.7)) : '0';
+}
+
 function clearRunTimers() {
   if (feedbackTimeout !== null) window.clearTimeout(feedbackTimeout);
   feedbackTimeout = null;
   pendingAnswer = false;
   card.style.transform = "";
   card.classList.remove("is-dragging");
+  clearSwipeVisual();
   $(".swipe-area").classList.remove("is-feedback-success", "is-feedback-error");
   $("#swipe-human").style.opacity = "0";
   $("#swipe-ai").style.opacity = "0";
@@ -421,6 +473,9 @@ function answer(type) {
     return;
   }
   pendingAnswer = true;
+  card.classList.remove('is-dragging');
+  // The committed swipe can retain a colored blur for the first beat of feedback.
+  if (!card.hasAttribute('data-swipe')) clearSwipeVisual();
   answerButtons.forEach((button) => { button.disabled = true; });
   // Stop the boss clock during feedback; the animation must not cost playing time.
   if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
@@ -432,6 +487,11 @@ function answer(type) {
   area.classList.add(correct ? "is-feedback-success" : "is-feedback-error");
   sounds.play(correct ? "success" : "failure");
   const referenceRun = run;
+  if (card.hasAttribute('data-swipe')) {
+    window.setTimeout(() => {
+      if (run === referenceRun) clearSwipeVisual();
+    }, 310);
+  }
   if (correct) {
     feedback.textContent = "Dobrze!";
     feedback.className = "play-feedback is-success";
@@ -479,20 +539,17 @@ card.addEventListener("pointerdown", (event) => {
 });
 card.addEventListener("pointermove", (event) => {
   if (!dragStart || dragStart.id !== event.pointerId) return;
-  const dx = Math.max(-140, Math.min(140, event.clientX - dragStart.x));
-  card.style.transform = `translateX(${dx}px) rotate(${dx * .042}deg)`;
-  $("#swipe-human").style.opacity = String(Math.min(1, Math.max(0, -dx / 80)));
-  $("#swipe-ai").style.opacity = String(Math.min(1, Math.max(0, dx / 80)));
+  applySwipeVisual(event.clientX - dragStart.x);
 });
 function endDrag(event) {
   if (!dragStart || dragStart.id !== event.pointerId) return;
   const dx = event.clientX - dragStart.x;
   dragStart = null;
   card.classList.remove("is-dragging");
-  card.style.transform = "";
-  $("#swipe-human").style.opacity = "0";
-  $("#swipe-ai").style.opacity = "0";
-  if (Math.abs(dx) >= 75) answer(dx > 0 ? "ai" : "human");
+  if (Math.abs(dx) >= 75) {
+    applySwipeVisual(dx);
+    answer(dx > 0 ? "ai" : "human");
+  } else clearSwipeVisual();
 }
 card.addEventListener("pointerup", endDrag);
 card.addEventListener("pointercancel", endDrag);

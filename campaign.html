@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
   <meta name="description" content="Kampania AI or Human: dynamiczne poziomy, 3 serca i bossowie.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.7.0">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.7.2">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./" aria-label="AI or Human — mapa kampanii"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <span class="edition-label">KAMPANIA • v0.7.1</span>
+      <span class="edition-label">KAMPANIA • v0.7.2</span>
     </header>
 
     <main>
@@ -27,7 +27,7 @@
           </div>
           <div class="lives-panel" aria-live="polite">
             <span class="label">TWOJE SERCA</span>
-            <strong id="map-hearts" class="hearts" aria-label="3 z 3 serc">♥ ♥ ♥</strong>
+            <div class="hearts-controls"><strong id="map-hearts" class="hearts" aria-label="3 z 3 serc">♥ ♥ ♥</strong><button id="map-sound-toggle" type="button" class="sound-toggle sound-toggle--icon" aria-pressed="true" aria-label="Wyłącz dźwięki gry" title="Wyłącz dźwięki gry"><span class="sound-toggle__icon" aria-hidden="true">🔊</span></button></div>
             <span class="recharge" id="map-recharge">Wszystkie serca gotowe</span>
           </div>
         </div>
@@ -50,15 +50,15 @@
       </section>
 
       <section id="campaign-play-view" class="play-view" aria-labelledby="play-title" hidden>
-        <div class="play-topline"><button id="back-to-map" class="back-button" type="button">← Mapa poziomów</button><div class="play-topline-actions"><button id="sound-toggle" type="button" class="sound-toggle" aria-pressed="true" aria-label="Wyłącz dźwięki gry">♫ Dźwięk: wł.</button><span class="eyebrow" id="play-stage-label">POZIOM 1</span></div></div>
-        <div class="play-heading"><div><h1 id="play-title">Rozpoznaj obraz</h1><p id="play-description" class="play-description">Przesuń w lewo: człowiek. W prawo: AI.</p></div><div class="play-hearts" id="play-hearts" aria-label="3 z 3 serc">♥ ♥ ♥</div></div>
+        <div class="play-topline"><button id="back-to-map" class="back-button" type="button">← Mapa poziomów</button><span class="eyebrow" id="play-stage-label">POZIOM 1</span></div>
+        <div class="play-heading"><div><h1 id="play-title">Rozpoznaj obraz</h1><p id="play-description" class="play-description">Przesuń w lewo: człowiek. W prawo: AI.</p></div><div class="play-status"><div class="play-hearts" id="play-hearts" aria-label="3 z 3 serc">♥ ♥ ♥</div><button id="sound-toggle" type="button" class="sound-toggle sound-toggle--icon" aria-pressed="true" aria-label="Wyłącz dźwięki gry" title="Wyłącz dźwięki gry"><span class="sound-toggle__icon" aria-hidden="true">🔊</span></button></div></div>
         <div class="question-progress"><span id="play-counter">1 / 5</span><span id="play-timer" hidden>01:00</span></div>
         <div class="progress-track"><div id="play-progress-bar" class="progress-fill"></div></div>
         <div class="demo-note demo-note--compact"><span class="note-dot"></span><span id="play-source-text">Obrazy demonstracyjne: nie są to prawdziwe fotografie. Odpowiedź jest na karcie.</span></div>
         <div class="swipe-area">
           <div id="swipe-card" class="swipe-card" tabindex="0" aria-label="Karta do oceny. Użyj strzałek w lewo lub w prawo.">
-            <span id="swipe-human" class="swipe-stamp swipe-stamp--human" aria-hidden="true">CZŁOWIEK</span><span id="swipe-ai" class="swipe-stamp swipe-stamp--ai" aria-hidden="true">AI</span>
             <img id="campaign-image" src="" alt="Grafika testowa" draggable="false">
+            <span id="swipe-human" class="swipe-stamp swipe-stamp--human" aria-hidden="true">CZŁOWIEK</span><span id="swipe-ai" class="swipe-stamp swipe-stamp--ai" aria-hidden="true">AI</span>
           </div>
         </div>
         <p id="play-feedback" class="play-feedback" aria-live="polite">Wybierz odpowiedź albo przesuń kartę.</p>
@@ -74,6 +74,6 @@
     </main>
     <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
-  <script type="module" src="./js/campaign-map.js?v=0.7.0"></script>
+  <script type="module" src="./js/campaign-map.js?v=0.7.2"></script>
 </body>
 </html>

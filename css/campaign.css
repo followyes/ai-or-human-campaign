@@ -275,3 +275,80 @@ body {
   .swipe-area.is-feedback-success::before { opacity: .4; }
   .swipe-area.is-feedback-error::before { opacity: .4; }
 }
+
+/* v0.7.2 — highly visible feedback, centered swipe labels and true lock-to-open reveal. */
+.hearts-controls { display:flex; align-items:center; justify-content:center; gap:9px; }
+.hearts-controls .hearts { margin: 1px 0; }
+.play-status { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex:0 0 auto; }
+.sound-toggle--icon { display:grid; place-items:center; width:39px; height:36px; min-width:39px; min-height:36px; padding:0; border-radius:12px; border:1px solid rgba(156,233,213,.40); background:rgba(18,40,51,.82); color:#f0faf4; font-size:18px; line-height:1; box-shadow:0 2px 10px rgba(0,0,0,.15); }
+.sound-toggle--icon:hover,.sound-toggle--icon:focus-visible { background:rgba(59,118,121,.45); border-color:#a4efdc; }
+.sound-toggle--icon[aria-pressed="false"] { border-color:rgba(180,192,199,.32); background:rgba(31,42,53,.8); }
+.sound-toggle__icon { pointer-events:none; font-size:19px; }
+.play-heading .play-status { align-self:center; }
+@media(max-width:640px) {
+  .hearts-controls { gap:5px; }
+  .sound-toggle--icon { width:34px;min-width:34px;height:32px;min-height:32px;border-radius:10px; }
+  .sound-toggle__icon { font-size:17px; }
+  .play-status { gap:6px; }
+  .play-hearts { font-size:16px; }
+}
+@media(max-height:540px) { .sound-toggle--icon { height:29px;min-height:29px; } }
+
+/* A dedicated, saturated background halo (not z-index:-1), plus a strong rim glow. */
+.swipe-area { isolation:isolate; position:relative; }
+.swipe-area::before, .swipe-area::after { content:""; position:absolute;pointer-events:none;z-index:0;opacity:0; }
+.swipe-area::before { inset:-12% -4%; border-radius:35%; background:radial-gradient(ellipse 78% 78% at 50% 50%, var(--v072-core) 0%, var(--v072-mid) 40%, var(--v072-outer) 65%, transparent 85%); }
+.swipe-area::after { inset:0; background:radial-gradient(ellipse at 50% 50%, var(--v072-mid) 0%, var(--v072-outer) 55%, transparent 86%); filter:blur(20px); }
+.swipe-area.is-feedback-success { --v072-core:rgba(19,245,116,.97); --v072-mid:rgba(23,233,116,.82); --v072-outer:rgba(27,201,104,.44); --v072-rim:rgba(52,255,126,.96); }
+.swipe-area.is-feedback-error { --v072-core:rgba(255,36,66,.98); --v072-mid:rgba(255,44,68,.87); --v072-outer:rgba(218,23,69,.52); --v072-rim:rgba(255,66,83,.97); }
+.swipe-area.is-feedback-success::before,.swipe-area.is-feedback-error::before { animation:v072-halo 1.12s ease-in-out both; }
+.swipe-area.is-feedback-success::after,.swipe-area.is-feedback-error::after { animation:v072-halo-soft 1.12s ease-in-out both; }
+.swipe-area .swipe-card { z-index:1; }
+.swipe-area.is-feedback-success .swipe-card,
+.swipe-area.is-feedback-error .swipe-card { animation:v072-card-rim 1.12s ease-in-out both; }
+@keyframes v072-halo { 0%{opacity:0;transform:scale(.8)} 20%{opacity:1;transform:scale(1)} 55%{opacity:1;transform:scale(1.12)} 100%{opacity:0;transform:scale(1.24)} }
+@keyframes v072-halo-soft { 0%{opacity:0} 26%{opacity:1} 65%{opacity:.95} 100%{opacity:0} }
+@keyframes v072-card-rim { 0%,100%{box-shadow:0 19px 45px rgba(0,0,0,.38)} 28%,62%{box-shadow:0 0 0 7px var(--v072-rim), 0 0 45px 19px var(--v072-mid), 0 0 105px 37px var(--v072-outer), 0 12px 35px rgba(0,0,0,.25)} }
+
+/* During drag the photograph smears; the chosen direction adds a color-matched trail. */
+.swipe-card img { position:relative;z-index:0; filter:blur(var(--drag-blur,0px)); transform:translateX(var(--drag-offset,0px)) scale(1.045); will-change:transform,filter; }
+.swipe-card:not(.is-dragging) img { transition:filter .2s ease-out, transform .2s ease-out; }
+.swipe-card::before, .swipe-card::after { content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--drag-color-opacity,0); }
+.swipe-card::before { z-index:1; }
+.swipe-card::after { z-index:2; mix-blend-mode:screen; }
+.swipe-card[data-swipe="ai"]::before { background:linear-gradient(90deg,transparent 10%,rgba(53,232,149,.12) 46%,rgba(36,255,162,.7) 100%); }
+.swipe-card[data-swipe="ai"]::after { background:repeating-linear-gradient(90deg,transparent 0 14px,rgba(132,255,185,.18) 16px 22px,transparent 26px 36px); }
+.swipe-card[data-swipe="human"]::before { background:linear-gradient(270deg,transparent 10%,rgba(62,178,236,.14) 46%,rgba(56,194,255,.7) 100%); }
+.swipe-card[data-swipe="human"]::after { background:repeating-linear-gradient(90deg,transparent 0 14px,rgba(135,225,255,.20) 16px 22px,transparent 26px 36px); }
+.swipe-stamp { inset:50% auto auto 50%;left:50%;right:auto;top:50%; padding:12px 19px; border:3px solid currentColor; border-radius:12px; background:rgba(8,21,28,.77); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); font-size:clamp(20px,5vw,31px);font-weight:950;letter-spacing:.045em;white-space:nowrap; transform:translate(-50%,-50%) scale(.97) rotate(0deg); text-shadow:0 2px 15px rgba(0,0,0,.9); box-shadow:0 0 28px currentColor; z-index:5; }
+.swipe-stamp--human,.swipe-stamp--ai { left:50%;right:auto;top:50%;transform:translate(-50%,-50%) scale(.97); }
+.swipe-stamp--human { color:#9be5ff; border-color:#9be5ff; }
+.swipe-stamp--ai { color:#acffd3; border-color:#acffd3; }
+@media(max-width:640px) { .swipe-stamp { padding:9px 13px; font-size:clamp(17px,5.1vw,25px);border-width:2px; } }
+
+/* Real visual lock during return: a lock node shakes, the CONTENT changes, then glows. */
+.path-stop--unlock-pending .path-node,
+.path-stop--unlock-animating .path-node { border-color:#6c8793;background:linear-gradient(155deg,#314959,#1b2c3b);box-shadow:0 5px 0 #09151c,0 8px 22px rgba(0,0,0,.32);color:#cfdee7; }
+.path-stop--unlock-pending .path-node__symbol,
+.path-stop--unlock-animating:not(.path-stop--unlock-revealed) .path-node__symbol { font-size:clamp(20px,3dvh,29px); }
+.path-stop--unlock-animating .path-node { animation:v072-lock-tremble 1.45s linear both; }
+.path-stop--unlock-animating::before { content:"";position:absolute;z-index:-1;left:50%;top:23px;width:135px;height:135px;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle,rgba(126,255,201,.65),rgba(55,221,178,.28) 43%,transparent 72%);opacity:0;pointer-events:none;animation:v072-unlock-aura 1.45s ease-out both; }
+.path-stop--unlock-revealed .path-node { background:linear-gradient(140deg,#d5ffec,#6bdfbd);border-color:#a2ffe5;color:#10282d;box-shadow:0 6px 0 #337e7f,0 0 34px 10px rgba(57,246,165,.62),0 0 75px rgba(44,224,170,.46); }
+.path-stop--unlock-revealed .path-node__symbol { animation:v072-unlock-number .68s cubic-bezier(.12,.8,.26,1.4) both; }
+.path-stop--unlock-revealed .path-stop__subtitle { color:#a2ffe0;font-weight:900; }
+@keyframes v072-lock-tremble { 0%,11%{transform:translateX(0) rotate(0)} 16%,27%,41%,52%{transform:translateX(-5px) rotate(-6deg)} 21%,34%,47%,57%{transform:translateX(5px) rotate(6deg)} 64%{transform:scale(1.24) rotate(-3deg)} 78%{transform:scale(.94) rotate(2deg)} 100%{transform:scale(1) rotate(0)} }
+@keyframes v072-unlock-aura { 0%,28%{opacity:0;transform:translateX(-50%) scale(.45)} 52%,72%{opacity:1;transform:translateX(-50%) scale(1.22)} 100%{opacity:0;transform:translateX(-50%) scale(1.45)} }
+@keyframes v072-unlock-number { 0%{opacity:.15;transform:scale(.3) rotate(-20deg)} 55%{opacity:1;transform:scale(1.42) rotate(7deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
+
+@media(prefers-reduced-motion:reduce) {
+  .swipe-area.is-feedback-success::before,.swipe-area.is-feedback-error::before,
+  .swipe-area.is-feedback-success::after,.swipe-area.is-feedback-error::after,
+  .swipe-area.is-feedback-success .swipe-card,.swipe-area.is-feedback-error .swipe-card,
+  .path-stop--unlock-animating .path-node,.path-stop--unlock-animating::before,
+  .path-stop--unlock-revealed .path-node__symbol { animation:none!important; }
+  .swipe-area.is-feedback-success::before,.swipe-area.is-feedback-error::before { opacity:.75; }
+  .swipe-area.is-feedback-success .swipe-card,.swipe-area.is-feedback-error .swipe-card { box-shadow:0 0 0 5px var(--v072-rim),0 0 35px 12px var(--v072-mid); }
+}
+/* Suppress legacy pseudo-lock (♙): the visible lock is the real DOM icon 🔒. */
+.path-stop--unlock-pending .path-node::before,
+.path-stop--unlock-animating .path-node::before { content:none!important;display:none!important; }
