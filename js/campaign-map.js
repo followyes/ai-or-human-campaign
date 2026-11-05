@@ -165,7 +165,20 @@ function renderMap() {
     symbol.className = 'path-node__symbol';
     symbol.setAttribute('aria-hidden', 'true');
     symbol.textContent = revealLocked || !unlocked ? '🔒' : stage.isBoss ? '♛' : done ? '★' : String(stage.id);
-    button.append(symbol);
+    // Diamond marker with a caption ribbon, inspired by the provided map reference.
+    // The real symbol remains in the DOM for lock-to-unlocked animation and accessibility.
+    const diamond = document.createElement('span');
+    diamond.className = 'path-node__diamond';
+    diamond.setAttribute('aria-hidden', 'true');
+    diamond.append(symbol);
+    const plate = document.createElement('span');
+    plate.className = 'path-node__plate';
+    plate.setAttribute('aria-hidden', 'true');
+    plate.textContent = stage.isBoss ? 'BOSS' : 'LEVEL';
+    const pin = document.createElement('span');
+    pin.className = 'path-node__pin';
+    pin.setAttribute('aria-hidden', 'true');
+    button.append(diamond, plate, pin);
     button.addEventListener('click', () => startStage(stage));
     const label = document.createElement('span');
     label.className = 'path-stop__title';
@@ -365,7 +378,7 @@ function clearRunTimers() {
   feedbackTimeout = null;
   pendingAnswer = false;
   card.style.transform = "";
-  card.classList.remove("is-dragging");
+  card.classList.remove("is-dragging", "is-committed");
   clearSwipeVisual();
   $(".swipe-area").classList.remove("is-feedback-success", "is-feedback-error");
   $("#swipe-human").style.opacity = "0";
@@ -403,7 +416,10 @@ function startStage(stage) {
 
 function showCard() {
   if (!run) return;
+  // Hide the tiny transition from the held, displaced old card to the fresh new image.
+  card.classList.add('is-card-switching');
   clearRunTimers();
+  requestAnimationFrame(() => card.classList.remove('is-card-switching'));
   if (run.pausedTimeLeft !== null && run.deadline) {
     run.deadline = Date.now() + run.pausedTimeLeft;
     run.pausedTimeLeft = null;
@@ -474,8 +490,10 @@ function answer(type) {
   }
   pendingAnswer = true;
   card.classList.remove('is-dragging');
-  // The committed swipe can retain a colored blur for the first beat of feedback.
-  if (!card.hasAttribute('data-swipe')) clearSwipeVisual();
+  // A committed card holds its release position and directional tint for the
+  // ENTIRE feedback interval. Keyboard/button answers also commit to one side.
+  if (!card.hasAttribute('data-swipe')) applySwipeVisual(type === 'ai' ? 120 : -120);
+  card.classList.add('is-committed');
   answerButtons.forEach((button) => { button.disabled = true; });
   // Stop the boss clock during feedback; the animation must not cost playing time.
   if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
@@ -487,11 +505,8 @@ function answer(type) {
   area.classList.add(correct ? "is-feedback-success" : "is-feedback-error");
   sounds.play(correct ? "success" : "failure");
   const referenceRun = run;
-  if (card.hasAttribute('data-swipe')) {
-    window.setTimeout(() => {
-      if (run === referenceRun) clearSwipeVisual();
-    }, 310);
-  }
+  // Do not clearSwipeVisual() here: that previously snapped the card back after 310ms.
+  // The card resets only when the next photo is installed or the view is dismissed.
   if (correct) {
     feedback.textContent = "Dobrze!";
     feedback.className = "play-feedback is-success";

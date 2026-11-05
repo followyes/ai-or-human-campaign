@@ -8,8 +8,8 @@ assert.match(html, /class="map-status"[\s\S]*?id="map-sound-toggle"[\s\S]*?class
 assert.match(html, /class="play-status"[\s\S]*?id="play-hearts"[\s\S]*?id="sound-toggle"/, 'Sound control is visible by play hearts');
 assert.match(js, /for \(const toggle of soundToggles\)/, 'Sound controls stay synchronized');
 assert.match(css, /\.swipe-stamp[^\n]*inset:50%/, 'Swipe labels are centered');
-assert.match(css, /\.swipe-card\[data-swipe="ai"\]::before/, 'AI directional green trail');
-assert.match(css, /\.swipe-card\[data-swipe="human"\]::before/, 'Human directional blue trail');
+assert.match(css, /\.swipe-card\[data-swipe="ai"\]::before/, 'AI directional trail');
+assert.match(css, /\.swipe-card\[data-swipe="human"\]::before/, 'Human directional trail');
 assert.match(js, /style\.setProperty\('--drag-blur'/, 'Blur strength grows with drag distance');
 assert.doesNotMatch(css, /repeating-linear-gradient/, 'No stripes or repeating lines in color blur');
 assert.match(css, /\.swipe-area::before \{\s*inset:0;/, 'Glow remains inside its soft radial bounds');
@@ -24,6 +24,6 @@ assert.match(js, /text\.textContent = corresponding\?\.isBoss \? '♛'/, 'Lock i
 assert.match(css, /@keyframes v072-lock-tremble/, 'Lock trembles');
 assert.match(css, /@keyframes v072-unlock-number/, 'Level number reveal');
 assert.match(css, /@media\(prefers-reduced-motion:reduce\)/, 'Reduced motion behavior');
-assert.match(html, /campaign\.css\?v=0\.7\.3/, 'Fresh CSS cache version');
-assert.match(html, /campaign-map\.js\?v=0\.7\.3/, 'Fresh JavaScript cache version');
+assert.match(html, /campaign\.css\?v=0\.7\.4/, 'Fresh CSS cache version');
+assert.match(html, /campaign-map\.js\?v=0\.7\.4/, 'Fresh JavaScript cache version');
 console.log('PASS: v0.7.3 sound outside map hearts, smooth glow, straight horizontal swipe, no striped blur');
