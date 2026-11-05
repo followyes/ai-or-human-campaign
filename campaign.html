@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
   <meta name="description" content="Kampania AI or Human: dynamiczne poziomy, 3 serca i bossowie.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.7.2">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.7.3">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./" aria-label="AI or Human — mapa kampanii"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <span class="edition-label">KAMPANIA • v0.7.2</span>
+      <span class="edition-label">KAMPANIA • v0.7.3</span>
     </header>
 
     <main>
@@ -25,10 +25,13 @@
             <h1 id="campaign-title">Witaj w kampanii<span class="period">.</span></h1>
             <p class="intro-description">Nowe poziomy powstają automatycznie. Każdy błąd kończy podejście.</p>
           </div>
-          <div class="lives-panel" aria-live="polite">
-            <span class="label">TWOJE SERCA</span>
-            <div class="hearts-controls"><strong id="map-hearts" class="hearts" aria-label="3 z 3 serc">♥ ♥ ♥</strong><button id="map-sound-toggle" type="button" class="sound-toggle sound-toggle--icon" aria-pressed="true" aria-label="Wyłącz dźwięki gry" title="Wyłącz dźwięki gry"><span class="sound-toggle__icon" aria-hidden="true">🔊</span></button></div>
-            <span class="recharge" id="map-recharge">Wszystkie serca gotowe</span>
+          <div class="map-status">
+            <button id="map-sound-toggle" type="button" class="sound-toggle sound-toggle--icon" aria-pressed="true" aria-label="Wyłącz dźwięki gry" title="Wyłącz dźwięki gry"><span class="sound-toggle__icon" aria-hidden="true">🔊</span></button>
+            <div class="lives-panel" aria-live="polite">
+              <span class="label">TWOJE SERCA</span>
+              <strong id="map-hearts" class="hearts" aria-label="3 z 3 serc">♥ ♥ ♥</strong>
+              <span class="recharge" id="map-recharge">Wszystkie serca gotowe</span>
+            </div>
           </div>
         </div>
 
@@ -74,6 +77,6 @@
     </main>
     <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
-  <script type="module" src="./js/campaign-map.js?v=0.7.2"></script>
+  <script type="module" src="./js/campaign-map.js?v=0.7.3"></script>
 </body>
 </html>

@@ -355,7 +355,7 @@ function applySwipeVisual(dx) {
   card.style.setProperty('--drag-blur', `${(amount * 10.5).toFixed(1)}px`);
   card.style.setProperty('--drag-offset', `${(dx * .09).toFixed(1)}px`);
   card.style.setProperty('--drag-color-opacity', String((amount * .85).toFixed(2)));
-  card.style.transform = `translateX(${Math.max(-140, Math.min(140, dx))}px) rotate(${(dx * .042).toFixed(2)}deg)`;
+  card.style.transform = `translate3d(${Math.max(-140, Math.min(140, dx))}px, 0, 0)`;
   $("#swipe-human").style.opacity = direction === 'human' ? String(Math.min(1, amount * 1.7)) : '0';
   $("#swipe-ai").style.opacity = direction === 'ai' ? String(Math.min(1, amount * 1.7)) : '0';
 }
