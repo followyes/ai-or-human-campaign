@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow, noarchive">
   <title>AI or Human — Admin</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./admin.css?v=0.5.0">
+  <link rel="stylesheet" href="./admin.css?v=0.6.0">
 </head>
 <body>
   <main class="admin-shell">
@@ -140,7 +140,12 @@
               </div>
             </div>
 
-            <p class="campaign-safety-note">Zdjęcia przypisane do aktywnych poziomów są chronione przed usunięciem i przeniesieniem.</p>
+            <div class="campaign-auto-status" id="campaign-auto-status" aria-live="polite">
+              <div class="campaign-auto-title"><strong id="campaign-auto-title">Automatyczne poziomy</strong><span id="campaign-auto-counter">— / 5</span></div>
+              <div class="campaign-auto-track"><span id="campaign-auto-fill"></span></div>
+              <p id="campaign-auto-note">Odczytywanie kolejki zdjęć…</p>
+            </div>
+            <p class="campaign-safety-note">Usunięcie lub przeniesienie zdjęcia używanego w poziomie usuwa cały ten poziom. Pozostałe karty wracają do puli.</p>
             <p class="inventory-status" id="inventory-status" role="status" aria-live="polite"></p>
             <div class="inventory-grid" id="inventory-grid"></div>
           </section>
@@ -192,6 +197,6 @@
     </section>
   </main>
 
-  <script type="module" src="./admin.js?v=0.5.0"></script>
+  <script type="module" src="./admin.js?v=0.6.0"></script>
 </body>
 </html>

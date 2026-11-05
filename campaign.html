@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
-  <meta name="description" content="Testowa kampania AI or Human: 5 poziomów, 3 serca i boss.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.4.2">
+  <meta name="description" content="Kampania AI or Human: dynamiczne poziomy, 3 serca i bossowie.">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.6.0">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./" aria-label="AI or Human — mapa kampanii"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <span class="edition-label">PROTOTYP • v0.4.2</span>
+      <span class="edition-label">KAMPANIA • v0.6.0</span>
     </header>
 
     <main>
@@ -23,7 +23,7 @@
           <div>
             <p class="eyebrow">TWOJA DROGA</p>
             <h1 id="campaign-title">Witaj w kampanii<span class="period">.</span></h1>
-            <p class="intro-description">Pięć wyzwań. Jeden finał. Każdy błąd kończy podejście.</p>
+            <p class="intro-description">Nowe poziomy powstają automatycznie. Każdy błąd kończy podejście.</p>
           </div>
           <div class="lives-panel" aria-live="polite">
             <span class="label">TWOJE SERCA</span>
@@ -35,7 +35,8 @@
         <div class="demo-note" id="campaign-source-note" role="status"><span class="note-dot"></span><span id="campaign-source-text">Wczytywanie danych kampanii…</span></div>
 
         <div class="map-panel">
-          <div class="map-panel-heading"><div><p class="eyebrow">ŚWIAT 01</p><h2>Odkryj, co jest prawdziwe</h2></div><span id="progress-label" class="progress-badge">0 / 6</span></div>
+          <div class="map-panel-heading"><div><p class="eyebrow" id="world-label">ŚWIAT 01 / 01</p><h2>Odkryj, co jest prawdziwe</h2></div><span id="progress-label" class="progress-badge">0 / 6</span></div>
+          <div class="world-navigation"><button id="world-prev" type="button" aria-label="Poprzedni świat">← Poprzedni</button><button id="world-next" type="button" aria-label="Następny świat">Następny →</button></div>
           <div class="path-scroll">
             <div class="journey" id="journey" aria-label="Mapa poziomów">
               <svg class="journey-line" viewBox="0 0 520 1000" preserveAspectRatio="none" aria-hidden="true"><path d="M260 100 C260 170 370 190 370 260 S145 350 145 420 S363 505 363 580 S165 680 165 740 S318 825 318 900"/></svg>
@@ -72,6 +73,6 @@
     </main>
     <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
-  <script type="module" src="./js/campaign-map.js?v=0.4.2"></script>
+  <script type="module" src="./js/campaign-map.js?v=0.6.0"></script>
 </body>
 </html>

@@ -4,7 +4,17 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Prototyp kampanii v0.4.3 (Supabase opcjonalny).** Oryginalne tryby Classic i Speed Run oraz panel admina znajdują się w kodzie, ale połączenie z bazą jest celowo odłączone. Strona główna (`index.html`, krótki URL `/ai-or-human-campaign/`) pokazuje ekran powitalny z jednym przyciskiem **Kampania**, prowadzącym do `campaign.html`. Starszy adres `classic.html` pozostaje aliasem tego ekranu. Zawiera 5 poziomów po 5 oznaczonych kart demonstracyjnych, bossa (10 kart), 3 serca i regenerację 3 min. Wszystkie grafiki są **fikcyjnymi, jawnie oznaczonymi placeholderami**, nie fotografiami; odpowiedzi służą wyłącznie do testowania mechaniki. Aktualny limit bossa 60 s jest wartością testową, nie zatwierdzoną decyzją.
+**Campaign v0.6.0 — dynamiczna mapa i administracja zdjęciami.**
+Menu główne (`index.html`) zawiera tylko przycisk **Kampania**, który otwiera `campaign.html`.
+Panel administracyjny działa pod `/admin/` z Supabase Auth.
+Pięć zwykłych poziomów (po 5 zdjęć) i boss (10 zdjęć) tworzą powtarzalny cykl.
+Gdy administrator doda odpowiednią liczbę nowych zdjęć, Supabase automatycznie tworzy
+kolejny etap. Usunięcie zdjęcia z etapu powoduje usunięcie etapu, oddanie pozostałych
+zdjęć do kolejki i automatyczną zmianę wyświetlanej numeracji.
+
+**Wymagany jednorazowy skrypt migracji:** `SUPABASE_SQL/06_automatyczne_poziomy.sql`
+w paczce aktualizacji ZIP (skrypt przechowywany poza repo). Bez uruchomienia tego skryptu
+aktualizacja zachowuje możliwość odczytu sześciu starych etapów.
 
 ## Uruchomienie i testy
 
@@ -17,15 +27,18 @@ npm run build
 
 Aby zobaczyć interfejs, uruchom lokalny serwer HTTP w folderze repozytorium (np. rozszerzeniem Live Server w VS Code). Otwieranie `index.html` poprzez `file://` może blokować moduły JS. Kampania działa bez Supabase na lokalnych zasobach. **Starsze tryby Classic i Speed Run są ukryte w publicznym menu i nie są testowane jako część kampanii.** Po otwarciu `index.html` w lokalnym serwerze pojawia się ekran powitalny; przycisk „Kampania” otwiera `campaign.html`.
 
-## Osobny Supabase — odczyt zdjęć kampanii
+## Osobny Supabase — dynamiczne etapy
 
-1. Utwórz NOWY projekt Supabase, niezależny od tego używanego przez oryginalną grę.
-2. Nie kopiuj produkcyjnego URL/klucza z oryginalnej wersji. `js/supabase-config.js` powinien zawierać wyłącznie adres nowego projektu i jego publiczny klucz (nie dostarczamy konfiguracji w ZIP-ach aktualizacyjnych).
-3. Nie dodawaj tajnych kluczy `service_role`, `sb_secret_*`, haseł ani prywatnych tokenów do plików publicznych.
-4. Utwórz schemat read-only według `SUPABASE_SQL/01_campaign.sql` z paczki aktualizacji (ten plik nie jest publikowany w repo).
-5. Po konfiguracji `projectUrl` i `publishableKey` w `js/supabase-config.js` kampania odczytuje publiczne przypisania. Użytkownik potwierdził działające połączenie z oddzielnym Supabase i losowanie zestawów zdjęć. Dopóki nie ma **35 aktywnych obrazów (5×5 + 10)**, pokazuje wyraźny status oraz bezpiecznie pozostaje w DEMO.
-6. Postęp prawdziwej kampanii nadal jest lokalny, ale oddzielony od postępu wersji DEMO. Produkcyjny zapis postępu wymaga autoryzacji / serwera i jest kolejnym etapem.
-5. Kod zawiera dodatkową blokadę adresu projektu bazy oryginalnej gry.
+- Baza musi być **oddzielnym** projektem `ai-or-human-campaign`. Nie dotykamy starej gry.
+- `js/supabase-config.js` zawiera publiczny URL i klucz `sb_publishable_`, które **nie są dołączane do ZIP-ów**.
+- Przed migracją v0.6.0 wykonaj kopię danych tabel kampanii i biblioteki.
+- W nowym SQL Editor uruchom **06_automatyczne_poziomy.sql** dopiero po opublikowaniu kodu v0.6.0.
+- Migracja przenosi dotychczasowe 35 kart do nowych tabel `campaign_stages` i `campaign_stage_cards` z trwałymi ID; wyłącza stare aktywne przypisania, ale nie kasuje plików.
+- Kolejne wgrania zdjęć przez panel `admin/` są liczone w `campaign_photo_queue`. Już istniejących 130 niezwiązanych z kampanią zdjęć nie dodajemy automatycznie.
+- Odpowiedzi i ścieżki aktywnych kart są publicznie odczytywane z widoku `campaign_public_cards`; queue i biblioteka panelu są chronione RLS.
+- W panelu można usunąć lub przenieść używane zdjęcie po potwierdzeniu konsekwencji: cały etap zostaje usunięty, a pozostałe zdjęcia wracają do kolejki.
+- Uwaga: usuwanie plików Storage i zmiany w PostgreSQL nie są pojedynczą transakcją; przed pracą na prawdziwych zdjęciach przetestuj ten scenariusz na plikach testowych.
+- Progres graczy pozostaje lokalny (`localStorage`) i nie synchronizuje się między urządzeniami.
 
 ## Wdrożenie
 

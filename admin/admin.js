@@ -29,7 +29,8 @@ import { DeleteDrainCoordinator } from "../js/delete-queue.js";
 import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js";
 import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js";
 import { AdminResultsPanel } from "../js/admin-results-ui.js";
-import { assertCampaignPhotoCanChange } from "../js/campaign-admin-guard.js";
+import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js";
+import { fetchAdminQueueStatus } from "../js/campaign-admin-status.js";
 
 const adminCard = document.querySelector("#admin-card");
 const tabLibrary = document.querySelector("#tab-library");
@@ -72,6 +73,20 @@ const inventoryMoveCancelButton = document.querySelector("#inventory-move-cancel
 const inventoryMoveToAiButton = document.querySelector("#inventory-move-to-ai");
 const inventoryMoveToHumanButton = document.querySelector("#inventory-move-to-human");
 const inventoryStatus = document.querySelector("#inventory-status");
+const autoTitle = document.querySelector('#campaign-auto-title');
+const autoCounter = document.querySelector('#campaign-auto-counter');
+const autoFill = document.querySelector('#campaign-auto-fill');
+const autoNote = document.querySelector('#campaign-auto-note');
+async function refreshAutoStatus() {
+  if (!currentSession) return;
+  try {
+    const status=await fetchAdminQueueStatus({session:currentSession});
+    autoTitle.textContent = status.target === 10 ? 'Następny etap: Boss' : 'Następny etap: zwykły poziom';
+    autoCounter.textContent = `${status.queued} / ${status.target}`;
+    autoFill.style.width = `${Math.min(100,100*status.queued/status.target)}%`;
+    autoNote.textContent = `${status.normal_stages} zwykłych poziomów · ${status.boss_stages} bossów · automatyczna kolejka`;
+  } catch { autoNote.textContent='Nie udało się odczytać licznika. Sprawdź migrację SQL v0.6.0.'; }
+}
 const inventoryGrid = document.querySelector("#inventory-grid");
 const inventoryFilterButtons = [...document.querySelectorAll("[data-filter]")];
 const countTotal = document.querySelector("#count-total");
@@ -699,6 +714,7 @@ async function refreshInventory({ quiet = false, refreshStorage = true } = {}) {
 
     inventoryRows = [...await listGameImages({ session: currentSession })];
     renderInventory();
+    await refreshAutoStatus();
     setInventoryStatus();
 
     if (refreshStorage && currentSession) {
@@ -735,6 +751,7 @@ async function reconcileSingleDeleteAuthority() {
 
   inventoryRows = [...await listGameImages({ session: currentSession })];
   renderInventory();
+  await refreshAutoStatus();
 
   if (currentSession) await refreshStorageUsage({ force: true });
   return true;
@@ -742,7 +759,6 @@ async function reconcileSingleDeleteAuthority() {
 
 async function processSingleDeleteItem(image) {
   await refreshCurrentSessionForMutation();
-  await assertCampaignPhotoCanChange({ session: currentSession, image });
   await deleteGameImage({
     session: currentSession,
     image
@@ -817,8 +833,14 @@ async function handleDelete(imageId) {
   const image = inventoryRows.find((row) => row.id === imageId);
   if (!image) return;
 
+  let impact;
+  try {
+    await refreshCurrentSessionForMutation();
+    impact = await getCampaignPhotoImpact({session:currentSession,image});
+  } catch(error) {setInventoryStatus(error.message,{error:true});return;}
+  const warning=impact ? `\n\nUWAGA: zostanie usunięty CAŁY ${impact.kind==='boss'?'boss':'poziom'} ${impact.display_number}. Pozostałe jego zdjęcia wrócą do puli.` : '';
   const accepted = window.confirm(
-    `Usunąć "${image.original_filename}" z kategorii ${image.content_class.toUpperCase()}?\n\nObraz zostanie trwale usunięty z biblioteki.`
+    `Usunąć "${image.original_filename}" z kategorii ${image.content_class.toUpperCase()}?${warning}\n\nObraz zostanie trwale usunięty z biblioteki.`
   );
   if (!accepted) return;
 
@@ -849,8 +871,18 @@ async function handleBulkDelete() {
     return;
   }
 
+  let affected = new Set();
+  try {
+    await refreshCurrentSessionForMutation();
+    for (const image of selectedRows) {
+      const impact=await getCampaignPhotoImpact({session:currentSession,image});
+      if (impact) affected.add(impact.stage_id);
+    }
+  } catch(error) {setInventoryStatus(error.message,{error:true});return;}
   const accepted = window.confirm(
-    `Usunąć ${selectedRows.length} zaznaczonych obrazów?\n\nObrazy zostaną trwale usunięte z biblioteki.`
+    `Usunąć ${selectedRows.length} zaznaczonych obrazów?`+
+    (affected.size ? `\n\nUWAGA: operacja usunie dodatkowo ${affected.size} całych poziomów/bossów. Pozostałe zdjęcia wrócą do puli.` : '')+
+    `\n\nObrazy zostaną trwale usunięte z biblioteki.`
   );
   if (!accepted) return;
 
@@ -869,8 +901,6 @@ async function handleBulkDelete() {
 
       try {
         await refreshCurrentSessionForMutation();
-        await assertCampaignPhotoCanChange({ session: currentSession, image });
-
         await deleteGameImage({
           session: currentSession,
           image
@@ -943,6 +973,15 @@ async function handleBulkMove(targetClass) {
   const eligibleRows = selectedRows.filter((row) => row.content_class !== targetClass);
   if (!eligibleRows.length) return;
 
+  try {
+    await refreshCurrentSessionForMutation();
+    const impacted = new Set();
+    for (const image of eligibleRows) {
+      const impact=await getCampaignPhotoImpact({session:currentSession,image});
+      if (impact) impacted.add(impact.stage_id);
+    }
+    if (impacted.size && !window.confirm(`Przeniesienie spowoduje usunięcie ${impacted.size} całych poziomów/bossów. Kontynuować?`)) return;
+  } catch(error) {setInventoryStatus(error.message,{error:true});return;}
   setMoveBusy(true);
   const failedIds = new Set();
 
@@ -950,7 +989,6 @@ async function handleBulkMove(targetClass) {
     const result = await runSequentialMoveBatch(selectedRows, targetClass, {
       moveItem: async (image, destinationClass) => {
         await refreshCurrentSessionForMutation();
-        await assertCampaignPhotoCanChange({ session: currentSession, image });
         return moveGameImageToClass({
           session: currentSession,
           image,

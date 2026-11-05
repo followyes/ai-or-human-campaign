@@ -42,7 +42,7 @@ if (isMain) {
   buildSite({ projectRoot })
     .then((result) => {
       console.log("BUILD PASS");
-      console.log("Content source: Supabase campaign when 35 cards are configured, otherwise local DEMO; legacy modes require separate tables");
+      console.log("Content source: Supabase campaign when new database levels are configured, otherwise local DEMO; legacy modes require separate tables");
       console.log(`Output: ${result.distRoot}`);
     })
     .catch((error) => {

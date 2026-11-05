@@ -1130,3 +1130,10 @@ h2 {
 
 /* Campaign v0.5: the original admin layout is retained; show safety guidance. */
 .campaign-safety-note { font-size: 0.8rem; line-height: 1.45; color: #536477; margin: .65rem 0; }
+
+/* Campaign v0.6.0 – automatic level queue, small panel addition */
+.campaign-auto-status{padding:12px 14px;margin:10px 0;border:1px solid #d9e5e4;border-radius:13px;background:#f4faf9;color:#20383b}
+.campaign-auto-title{display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.campaign-auto-track{height:8px;margin-top:9px;border-radius:6px;overflow:hidden;background:#d6e6e1}
+.campaign-auto-track span{display:block;width:0;height:100%;background:#269d87;transition:width .2s}
+.campaign-auto-status p{font-size:11px;margin:8px 0 0;color:#597071}

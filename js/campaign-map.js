@@ -5,6 +5,7 @@ import {
 } from "./campaign-core.js";
 import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js";
 import { resolveSupabasePublicConfig } from "./content-source.js";
+import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 
 const $ = (selector) => document.querySelector(selector);
 const mapView = $("#campaign-map-view");
@@ -21,6 +22,8 @@ let currentStorageKey = STORAGE_KEY;
 let activeStages = STAGES;
 let sourceLoading = false;
 let contentSource = "demo";
+let worldPage = 0;
+const STAGES_PER_WORLD = 6;
 
 function setContentNotice(text, demo = true) {
   const note = $("#campaign-source-note");
@@ -37,7 +40,11 @@ function setContentNotice(text, demo = true) {
 
 function restoreProgress(key = STORAGE_KEY) {
   try {
-    let stored = sanitizeProgress(JSON.parse(localStorage.getItem(key)));
+    const raw = JSON.parse(localStorage.getItem(key));
+    let stored = sanitizeProgress(raw);
+    if (key === LIVE_STORAGE_KEY && Array.isArray(raw?.completedStageIds)) {
+      stored.completedStageIds = raw.completedStageIds;
+    }
     // One-time conversion of a v0.2 ten-minute cooldown to the new three-minute rule.
     // Keep the same storage key to preserve all completed levels and remaining hearts.
     if (key === STORAGE_KEY && localStorage.getItem(HEART_REGEN_MIGRATION_KEY) !== "done") {
@@ -45,7 +52,7 @@ function restoreProgress(key = STORAGE_KEY) {
       localStorage.setItem(HEART_REGEN_MIGRATION_KEY, "done");
       localStorage.setItem(key, JSON.stringify(stored));
     }
-    return regenerate(stored);
+    return keepLiveFields(regenerate(stored),stored);
   } catch { return newProgress(); }
 }
 let progress = restoreProgress();
@@ -72,7 +79,7 @@ function redrawHearts() {
 }
 
 function syncTime() {
-  const fresh = regenerate(progress);
+  const fresh = keepLiveFields(regenerate(progress), progress);
   if (fresh.hearts !== progress.hearts || fresh.nextHeartAt !== progress.nextHeartAt) {
     progress = fresh;
     save();
@@ -87,22 +94,32 @@ function syncTime() {
 }
 
 function setScreen(name) {
+  const previousScreen = screen;
   screen = name;
   mapView.hidden = name !== "map";
   playView.hidden = name !== "play";
   resultView.hidden = name !== "result";
-  if (name === "map") renderMap();
+  if (name === "map") {
+    renderMap();
+    if (previousScreen !== 'map' && contentSource === 'supabase') void initializeCampaignSource();
+  }
 
 }
 
 function renderMap() {
-  progress = regenerate(progress);
+  progress = keepLiveFields(regenerate(progress), progress);
   redrawHearts();
-  progressLabel.textContent = `${progress.completed} / 6`;
+  const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
+  progressLabel.textContent = `${doneCount} / ${activeStages.length}`;
+  const pages = Math.max(1, Math.ceil(activeStages.length / STAGES_PER_WORLD));
+  worldPage = Math.min(worldPage, pages-1);
+  $("#world-label").textContent = `ŚWIAT ${String(worldPage + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`;
+  $("#world-prev").disabled = worldPage === 0;
+  $("#world-next").disabled = worldPage >= pages - 1;
   stops.replaceChildren();
-  activeStages.forEach((stage) => {
-    const done = stage.id <= progress.completed;
-    const unlocked = isStageUnlocked(progress, stage.id);
+  activeStages.slice(worldPage * STAGES_PER_WORLD, (worldPage+1)*STAGES_PER_WORLD).forEach((stage) => {
+    const done = contentSource === 'supabase' ? (progress.completedStageIds || []).includes(stage.uid) : stage.id <= progress.completed;
+    const unlocked = contentSource === 'supabase' ? isStableStageUnlocked(progress, stage, activeStages) : isStageUnlocked(progress, stage.id);
     const item = document.createElement("li");
     item.className = `path-stop ${done ? "path-stop--completed" : unlocked ? "path-stop--available" : "path-stop--locked"}`;
     const button = document.createElement("button");
@@ -137,8 +154,10 @@ function clearRunTimers() {
 }
 
 function startStage(stage) {
-  progress = regenerate(progress);
-  if (sourceLoading || !isStageUnlocked(progress, stage.id)) return;
+  progress = keepLiveFields(regenerate(progress), progress);
+  if (sourceLoading || !(contentSource === 'supabase'
+    ? isStableStageUnlocked(progress,stage,activeStages)
+    : isStageUnlocked(progress,stage.id))) return;
   if (progress.hearts === 0) {
     showResult("Brak serc", "Poczekaj na regenerację jednego serca, aby rozpocząć poziom od początku.", "♥", null);
     return;
@@ -169,7 +188,7 @@ function showCard() {
   $("#play-progress-bar").style.width = `${100 * run.index / run.deck.length}%`;
   feedback.textContent = "Wybierz odpowiedź albo przesuń kartę.";
   feedback.className = "play-feedback";
-  image.alt = `Oznaczona grafika demonstracyjna ${current.id}`;
+  image.alt = contentSource === "demo" ? `Oznaczona grafika demonstracyjna ${current.id}` : `Fotografia ${run.index+1}`;
   // Boss timer starts only once the first locally bundled image is ready.
   if (run.stage.isBoss && !run.started) {
     image.onload = () => {
@@ -202,17 +221,17 @@ function showResult(title, message, symbol, nextStage, primaryLabel = "Kontynuuj
 function winRun() {
   if (!run) return;
   const stage = run.stage;
-  progress = completeStage(progress, stage.id);
+  progress = contentSource === "supabase" ? markStableComplete(progress,stage.uid) : completeStage(progress, stage.id);
   save();
-  const nextStage = activeStages[stage.id] || null;
+  const nextStage = activeStages[activeStages.findIndex(s => s.uid === stage.uid) + 1] || null;
   showResult(stage.isBoss ? "Boss pokonany!" : `Poziom ${stage.id} ukończony!`,
-    stage.isBoss ? "Świetnie! Ukończono demonstracyjną kampanię. Możesz powtarzać etapy na mapie." : `Zaliczone ${stage.images.length} kart. ${nextStage ? `Odblokowano ${nextStage.isBoss ? "bossa" : `poziom ${nextStage.id}`}.` : ""}`,
+    stage.isBoss ? "Boss pokonany! Możesz kontynuować na mapie lub powtórzyć etap." : `Zaliczone ${stage.images.length} kart. ${nextStage ? `Odblokowano ${nextStage.isBoss ? "bossa" : `poziom ${nextStage.id}`}.` : ""}`,
     stage.isBoss ? "♛" : "★", nextStage);
 }
 
 function loseRun(message, deductHeart) {
   if (!run) return;
-  if (deductHeart) progress = takeHeart(progress);
+  if (deductHeart) progress = keepLiveFields(takeHeart(progress), progress);
   save();
   // One mistake ends the attempt. The next run starts at image 1 with a reshuffled full deck.
   const failedStage = run.stage;
@@ -292,6 +311,8 @@ function endDrag(event) {
 card.addEventListener("pointerup", endDrag);
 card.addEventListener("pointercancel", endDrag);
 
+$("#world-prev").addEventListener('click', () => {worldPage=Math.max(0,worldPage-1);renderMap();});
+$("#world-next").addEventListener('click', () => {worldPage+=1;renderMap();});
 renderMap();
 
 async function initializeCampaignSource() {
@@ -312,13 +333,22 @@ async function initializeCampaignSource() {
   try {
     const loaded = await fetchCampaignStages({ config });
     if (loaded.ready) {
+      const firstLoad = contentSource !== 'supabase';
       activeStages = loaded.stages;
-      contentSource = "supabase";
+      contentSource = 'supabase';
       currentStorageKey = LIVE_STORAGE_KEY;
-      progress = restoreProgress(LIVE_STORAGE_KEY);
-      setContentNotice("Zdjęcia z nowego Supabase: 35/35 przypisanych do kampanii. Postęp nadal zapisuje się lokalnie.", false);
+      if (firstLoad) {
+        progress = restoreProgress(LIVE_STORAGE_KEY);
+        if (!Array.isArray(progress.completedStageIds)) {
+          progress.completedStageIds = readStableCompletedIds(progress, activeStages);
+          save();
+        }
+        const firstUnfinished = activeStages.findIndex(s => !(progress.completedStageIds || []).includes(s.uid));
+        worldPage = Math.floor(Math.max(0,firstUnfinished) / STAGES_PER_WORLD);
+      }
+      setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach. Postęp zapisany lokalnie.`, false);
     } else {
-      setContentNotice(`Połączono z Supabase: ${loaded.count}/35 zdjęć. Do czasu skompletowania zestawów działa DEMO.`);
+      setContentNotice(`W Supabase nie ma jeszcze gotowych poziomów (${loaded.count} kart). Działa DEMO.`);
     }
   } catch (error) {
     const detail = error instanceof CampaignSourceError ? error.message : "Nie udało się pobrać zdjęć.";
@@ -331,4 +361,7 @@ async function initializeCampaignSource() {
 
 void initializeCampaignSource();
 window.setInterval(syncTime, 250);
-window.addEventListener("pageshow", syncTime);
+window.addEventListener("pageshow", () => {
+  syncTime();
+  if (contentSource === 'supabase' && screen === 'map') void initializeCampaignSource();
+});

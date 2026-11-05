@@ -154,3 +154,9 @@ body {
 }
 .ambient-a { background: #b66bdd; opacity: .12; }
 .ambient-b { background: #e49cb3; opacity: .1; }
+
+/* v0.6.0: 6 etapów na jedną stronę mapy, bez przewijania. */
+.world-navigation{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:2px 18px;flex:0 0 auto}
+.world-navigation button{color:#a4e9da;border:1px solid rgba(144,230,210,.28);background:rgba(29,63,70,.55);border-radius:9px;font-size:11px;padding:5px 12px;cursor:pointer}
+.world-navigation button:disabled{opacity:.32;cursor:default}
+@media(max-height:650px){.world-navigation{padding:0 12px}.world-navigation button{font-size:9px;padding:2px 8px}}

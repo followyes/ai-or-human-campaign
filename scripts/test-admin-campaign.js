@@ -1,40 +1,32 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import {
-  CampaignPhotoProtectedError,
-  assertCampaignPhotoCanChange
-} from '../js/campaign-admin-guard.js';
-
-const config = { projectUrl: 'https://new-campaign-001.supabase.co', publishableKey: 'sb_publishable_test' };
-const session = { access_token: 'test-admin-jwt' };
-const image = { storage_path: 'ai/used.avif' };
+import {readFileSync} from 'node:fs';
+import {getCampaignPhotoImpact,CampaignPhotoProtectedError} from '../js/campaign-admin-guard.js';
+import {fetchAdminQueueStatus} from '../js/campaign-admin-status.js';
+const config={projectUrl:'https://new-campaign-001.supabase.co',publishableKey:'sb_publishable_test'};
+const session={access_token:'test-admin-jwt'};
+const image={storage_path:'ai/used.avif'};
 let request;
-assert.equal(await assertCampaignPhotoCanChange({
-  session, image, config,
-  fetchImpl: async (url, options) => {
-    request = { url, options };
-    return { ok:true, json: async () => [] };
-  }
-}), true);
-assert.equal(request.url.searchParams.get('storage_path'), 'eq.ai/used.avif');
-assert.equal(request.options.headers.Authorization, 'Bearer test-admin-jwt');
-await assert.rejects(
-  () => assertCampaignPhotoCanChange({session, image, config, fetchImpl: async () => ({ok: true, json: async () => [{level_id: 3}]})}),
-  e => e instanceof CampaignPhotoProtectedError && e.message.includes('poziomie 3')
-);
-await assert.rejects(
-  () => assertCampaignPhotoCanChange({session, image, config, fetchImpl: async () => ({ok:false, status:403})}),
-  e => e.code === 'CAMPAIGN_GUARD_HTTP'
-);
-await assert.rejects(
-  () => assertCampaignPhotoCanChange({session, image, config, fetchImpl: async () => { throw new Error('connection'); }}),
-  e => e.code === 'CAMPAIGN_GUARD_NETWORK'
-);
-const code = readFileSync(new URL('../admin/admin.js', import.meta.url), 'utf8');
-assert.match(code, /await assertCampaignPhotoCanChange\(\{ session: currentSession, image \}\)/);
-assert.equal((code.match(/await assertCampaignPhotoCanChange/g) || []).length, 3, 'single delete, bulk delete, bulk move are protected');
-const adminHtml = readFileSync(new URL('../admin/index.html', import.meta.url), 'utf8');
-assert.match(adminHtml, /id="login-form"/);
-assert.match(adminHtml, /id="inventory-grid"/);
-assert.match(adminHtml, /id="tab-results"/);
-console.log('admin campaign guard: checks PASSED');
+const impact=await getCampaignPhotoImpact({session,image,config,fetchImpl:async(url,opts)=>{
+  request={url,opts};return {ok:true,json:async()=>[{stage_id:'x',display_number:3,kind:'normal'}]};
+}});
+assert.equal(impact.display_number,3);
+assert.equal(request.url.searchParams.get('storage_path'),'eq.ai/used.avif');
+assert.equal(request.url.pathname,'/rest/v1/campaign_public_cards');
+assert.equal(request.opts.headers.Authorization,'Bearer test-admin-jwt');
+assert.equal(await getCampaignPhotoImpact({session,image,config,fetchImpl:async()=>({ok:true,json:async()=>[]})}),null);
+await assert.rejects(getCampaignPhotoImpact({session,image,config,fetchImpl:async()=>({ok:false,status:403})}),CampaignPhotoProtectedError);
+await assert.rejects(getCampaignPhotoImpact({session,image,config,fetchImpl:async()=>{throw Error('offline');}}),CampaignPhotoProtectedError);
+const status=await fetchAdminQueueStatus({session,config,fetchImpl:async()=>({ok:true,json:async()=>({queued:3,target:5,normal_stages:5,boss_stages:1})})});
+assert.equal(status.queued,3);
+assert.equal(status.target,5);
+const admin=readFileSync(new URL('../admin/admin.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../admin/index.html',import.meta.url),'utf8');
+assert.match(admin,/getCampaignPhotoImpact/);
+assert.match(admin,/refreshAutoStatus/);
+assert.match(admin,/await deleteGameImage/);
+assert.match(html,/id="campaign-auto-fill"/);
+const sql=readFileSync(new URL('../SUPABASE_SQL/06_automatyczne_poziomy.sql',import.meta.url),'utf8');
+for(const token of ['campaign_photo_queue','campaign_public_cards','campaign_stages','campaign_stage_cards',
+'campaign_library_before_change','campaign_admin_queue_status','campaign_assemble_queue']) assert.ok(sql.includes(token));
+assert.doesNotMatch(sql,/DELETE\s+FROM\s+storage\.objects/i,'Never delete Storage files via SQL');
+console.log('PASS: admin cascade warnings, queue status and migration safety contracts');
