@@ -6,6 +6,7 @@ import {
 import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js";
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
+import { createCampaignSounds } from "./campaign-sfx.js";
 
 const $ = (selector) => document.querySelector(selector);
 const mapView = $("#campaign-map-view");
@@ -22,13 +23,18 @@ const mapScroller = $("#map-scroll");
 const journey = $("#journey");
 const unlockBanner = $("#map-unlock-banner");
 const PATH_X = [50, 72, 29, 70, 32, 61];
-const UNLOCK_ANIMATION_MS = 2650;
+const UNLOCK_SCROLL_DELAY_MS = 950;
+const UNLOCK_SHAKE_MS = 1550;
+const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 1500;
+const ANSWER_EFFECT_MS = 980;
+const sounds = createCampaignSounds();
 let currentStorageKey = STORAGE_KEY;
 let activeStages = STAGES;
 let sourceLoading = false;
 let contentSource = "demo";
 let unlockState = null;
 let unlockTimeout = null;
+let unlockRevealTimeout = null;
 let layoutFrame = null;
 let initialMapCentered = false;
 
@@ -67,6 +73,15 @@ let run = null;
 let pendingAnswer = false;
 let screen = "map";
 let feedbackTimeout = null;
+const soundToggle = $("#sound-toggle");
+function refreshSoundToggle() {
+  const enabled = sounds.isEnabled();
+  soundToggle.setAttribute("aria-pressed", String(enabled));
+  soundToggle.setAttribute("aria-label", enabled ? "Wyłącz dźwięki gry" : "Włącz dźwięki gry");
+  soundToggle.textContent = enabled ? "♫ Dźwięk: wł." : "♫ Dźwięk: wył.";
+}
+soundToggle.addEventListener("click", () => { sounds.setEnabled(!sounds.isEnabled()); refreshSoundToggle(); });
+refreshSoundToggle();
 
 function save() {
   try { localStorage.setItem(currentStorageKey, JSON.stringify(progress)); }
@@ -96,7 +111,7 @@ function syncTime() {
   if (screen === "play" && run?.stage.isBoss && run.deadline) {
     const remaining = Math.max(0, run.deadline - Date.now());
     $("#play-timer").textContent = formatTime(remaining);
-    if (remaining === 0) loseRun("Czas minął! Walka z bossem zaczyna się od początku przy kolejnej próbie.", true);
+    if (remaining === 0 && !pendingAnswer) loseRun("Czas minął! Walka z bossem zaczyna się od początku przy kolejnej próbie.", true);
   }
 }
 
@@ -144,8 +159,11 @@ function renderMap() {
     const subtitle = document.createElement('span');
     subtitle.className = 'path-stop__subtitle';
     subtitle.textContent = done ? 'Ukończony · zagraj ponownie' : !unlocked ? 'Zablokowany' : `${stage.images.length} kart · rozpocznij`;
-    if (unlockState?.completedUid === item.dataset.stageUid) item.classList.add('path-stop--just-completed');
-    if (unlockState?.nextUid === item.dataset.stageUid) item.classList.add('path-stop--just-unlocked');
+    if (unlockState?.completedUid === item.dataset.stageUid && unlockState.phase === 'animating') item.classList.add('path-stop--just-completed');
+    if (unlockState?.nextUid === item.dataset.stageUid) {
+      item.classList.add(unlockState.phase === 'animating' ? 'path-stop--unlock-animating' : 'path-stop--unlock-pending');
+      button.disabled = true; // No clicks until the lock reveal finishes.
+    }
     item.append(button, label, subtitle);
     stops.append(item);
   });
@@ -204,37 +222,55 @@ function scrollMapToStage(uid, behavior = 'smooth', partnerUid = null) {
 
 function showUnlockOnMap(stage, nextStage, wasCompleted) {
   if (unlockTimeout !== null) clearTimeout(unlockTimeout);
+  if (unlockRevealTimeout !== null) clearTimeout(unlockRevealTimeout);
   const newlyUnlocked = nextStage && !wasCompleted && !(contentSource === 'supabase'
     ? (progress.completedStageIds || []).includes(nextStage.uid)
     : nextStage.id <= progress.completed);
   unlockState = {
     completedUid: stage.uid || String(stage.id),
-    nextUid: newlyUnlocked ? nextStage.uid || String(nextStage.id) : null
+    nextUid: newlyUnlocked ? nextStage.uid || String(nextStage.id) : null,
+    phase: 'waiting'
   };
   const completedName = stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
   unlockBanner.textContent = newlyUnlocked
     ? `${completedName} Odblokowano ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
     : `${completedName} ${wasCompleted ? 'Świetnie, zagraj ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
   unlockBanner.hidden = false;
-  // Immediately return to the map; the reveal never requires another button.
   clearRunTimers();
   run = null;
   setScreen('map');
+  // The map moves into place BEFORE the locked icon starts trembling.
   requestAnimationFrame(() => scrollMapToStage(
     unlockState.nextUid || unlockState.completedUid,
     'smooth',
     unlockState.nextUid ? unlockState.completedUid : null
   ));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  unlockRevealTimeout = window.setTimeout(() => {
+    if (screen !== 'map' || !unlockState) return;
+    unlockState.phase = 'animating';
+    const completedItem = [...stops.children].find(item => item.dataset.stageUid === unlockState.completedUid);
+    completedItem?.classList.add('path-stop--just-completed');
+    if (unlockState.nextUid) {
+      const item = [...stops.children].find(node => node.dataset.stageUid === unlockState.nextUid);
+      item?.classList.remove('path-stop--unlock-pending');
+      item?.classList.add('path-stop--unlock-animating');
+    }
+    unlockRevealTimeout = null;
+  }, reducedMotion ? 0 : UNLOCK_SCROLL_DELAY_MS);
   unlockTimeout = window.setTimeout(() => {
     unlockState = null;
     unlockBanner.hidden = true;
-    stops.querySelectorAll('.path-stop--just-completed, .path-stop--just-unlocked').forEach(item => {
-      item.classList.remove('path-stop--just-completed', 'path-stop--just-unlocked');
+    stops.querySelectorAll('.path-stop--just-completed, .path-stop--unlock-pending, .path-stop--unlock-animating').forEach(item => {
+      item.classList.remove('path-stop--just-completed', 'path-stop--unlock-pending', 'path-stop--unlock-animating');
+      const button = item.querySelector('button');
+      if (button && !sourceLoading) button.disabled = false;
     });
     unlockTimeout = null;
-    // Refresh the stage list after the visual reveal, never during its animation.
+    if (screen === 'map') renderMap();
+    // Refresh levels only after the reveal so its animation is never interrupted.
     if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
-  }, UNLOCK_ANIMATION_MS);
+  }, reducedMotion ? 800 : UNLOCK_ANIMATION_MS);
 }
 
 // Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
@@ -279,6 +315,7 @@ function clearRunTimers() {
   pendingAnswer = false;
   card.style.transform = "";
   card.classList.remove("is-dragging");
+  $(".swipe-area").classList.remove("is-feedback-success", "is-feedback-error");
   $("#swipe-human").style.opacity = "0";
   $("#swipe-ai").style.opacity = "0";
   answerButtons.forEach((button) => { button.disabled = false; });
@@ -299,6 +336,7 @@ function startStage(stage) {
     deck: shuffleImages(stage.images),
     index: 0,
     deadline: null,
+    pausedTimeLeft: null,
     started: false
   };
   $("#play-title").textContent = stage.isBoss ? "Finałowa próba" : stage.title;
@@ -314,6 +352,10 @@ function startStage(stage) {
 function showCard() {
   if (!run) return;
   clearRunTimers();
+  if (run.pausedTimeLeft !== null && run.deadline) {
+    run.deadline = Date.now() + run.pausedTimeLeft;
+    run.pausedTimeLeft = null;
+  }
   const current = run.deck[run.index];
   $("#play-counter").textContent = `${run.index + 1} / ${run.deck.length}`;
   $("#play-progress-bar").style.width = `${100 * run.index / run.deck.length}%`;
@@ -380,25 +422,38 @@ function answer(type) {
   }
   pendingAnswer = true;
   answerButtons.forEach((button) => { button.disabled = true; });
+  // Stop the boss clock during feedback; the animation must not cost playing time.
+  if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
   const correct = run.deck[run.index].type === type;
+  const area = $(".swipe-area");
+  area.classList.remove("is-feedback-success", "is-feedback-error");
+  // A forced reflow allows two consecutive identical answers to replay the fade.
+  void area.offsetWidth;
+  area.classList.add(correct ? "is-feedback-success" : "is-feedback-error");
+  sounds.play(correct ? "success" : "failure");
+  const referenceRun = run;
   if (correct) {
-    feedback.textContent = "Dobrze! Następna karta.";
+    feedback.textContent = "Dobrze!";
     feedback.className = "play-feedback is-success";
-    const referenceRun = run;
     feedbackTimeout = window.setTimeout(() => {
       if (run !== referenceRun || screen !== "play") return;
       run.index += 1;
       if (run.index >= run.deck.length) winRun(); else showCard();
-    }, 330);
+    }, ANSWER_EFFECT_MS);
   } else {
-    // No second chance within the same attempt: lose one heart, then discard the run.
-    loseRun("Błędna odpowiedź — tracisz jedno serce i kończysz to podejście.", true);
+    // Red fade first; only then deduct a heart and reveal the loss message.
+    feedback.textContent = "";
+    feedback.className = "play-feedback";
+    feedbackTimeout = window.setTimeout(() => {
+      if (run !== referenceRun || screen !== "play") return;
+      loseRun("Błędna odpowiedź — tracisz jedno serce i kończysz to podejście.", true);
+    }, ANSWER_EFFECT_MS);
   }
 }
 
 $("#answer-human").addEventListener("click", () => answer("human"));
 $("#answer-ai").addEventListener("click", () => answer("ai"));
-$("#back-to-map").addEventListener("click", () => { clearRunTimers(); run = null; setScreen("map"); });
+$("#back-to-map").addEventListener("click", () => { if (pendingAnswer) return; clearRunTimers(); run = null; setScreen("map"); });
 $("#result-map").addEventListener("click", () => setScreen("map"));
 $("#reset-demo").addEventListener("click", () => {
   if (!window.confirm("Czy na pewno wyzerować lokalny postęp kampanii i przywrócić 3 serca? Zmiana dotyczy tylko tej przeglądarki.")) return;

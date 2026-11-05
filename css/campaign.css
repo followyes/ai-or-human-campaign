@@ -201,17 +201,67 @@ body {
   box-shadow: 0 12px 35px rgba(0,0,0,.35);
   animation: map-banner-appear .35s ease both;
 }
+/* v0.7.1: locked tile stays on top during scroll, trembles, then reveals its active color. */
 .path-stop--just-completed .path-node { animation: map-stage-finish 1.15s ease-out 1; }
-.path-stop--just-unlocked .path-node { animation: map-stage-unlock 1.35s .3s cubic-bezier(.15,.8,.3,1.12) both; }
-.path-stop--just-unlocked .path-node::before {
-  content: '🔒'; display: grid; place-items: center; position: absolute; z-index: 3;
-  inset: -3px; border-radius: inherit; background: #283c49; font-size: 23px;
-  animation: map-lock-open 1.2s .35s ease-in forwards; pointer-events: none;
+.path-stop--unlock-pending .path-node,
+.path-stop--unlock-animating .path-node { isolation: isolate; }
+.path-stop--unlock-pending .path-node::after,
+.path-stop--unlock-animating .path-node::after { opacity: 0 !important; }
+.path-stop--unlock-pending .path-node::before,
+.path-stop--unlock-animating .path-node::before {
+  content: '♙'; display: grid; place-items: center; position: absolute; z-index: 3;
+  inset: -2px; border-radius: inherit; border: 2px solid #4c6771;
+  background: linear-gradient(155deg, #2c4658, #152532);
+  color: #a6b8c0; font-size: 27px; font-weight: 900;
+  opacity: 1; pointer-events: none;
 }
+.path-stop--unlock-animating .path-node { animation: map-lock-shudder 1.55s cubic-bezier(.35,.0,.2,1) both; }
+.path-stop--unlock-animating .path-node::before { animation: map-lock-reveal 1.55s ease-in-out forwards; }
+.path-stop--unlock-animating .path-node::after { animation: map-unlock-label 1.55s ease-in-out forwards; }
 @keyframes map-banner-appear { from { opacity: 0; transform: translate(-50%, -9px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes map-stage-finish { 0% { filter: brightness(1); transform: scale(.9); } 35% { filter: brightness(1.6); transform: scale(1.20); } 70% { transform: scale(.96); } 100% { filter: brightness(1); transform: scale(1); } }
-@keyframes map-stage-unlock { 0% { filter: brightness(.65); transform: scale(.68); } 48% { filter: brightness(1.8); transform: scale(1.25); } 100% { filter: brightness(1); transform: scale(1); } }
-@keyframes map-lock-open { 0%, 28% { opacity: 1; transform: scale(1); } 70% { opacity: .35; transform: translateY(-28px) rotate(20deg) scale(.72); } 100% { opacity: 0; transform: translateY(-45px) rotate(24deg) scale(.55); } }
+@keyframes map-lock-shudder {
+  0%,15% { transform: translateX(0) rotate(0) scale(1); filter: brightness(.85); }
+  20% { transform: translateX(-3px) rotate(-4deg) scale(1.04); }
+  25% { transform: translateX(4px) rotate(4deg) scale(1.04); }
+  31% { transform: translateX(-5px) rotate(-5deg) scale(1.06); }
+  38% { transform: translateX(5px) rotate(5deg) scale(1.06); }
+  45% { transform: translateX(-3px) rotate(-3deg) scale(1.10); }
+  52% { transform: translateX(3px) rotate(3deg) scale(1.14); filter: brightness(1.75); }
+  65% { transform: translateX(0) rotate(0) scale(1.24); filter: brightness(1.9); }
+  82% { transform: scale(.95); filter: brightness(1.15); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes map-lock-reveal {
+  0%,45% { opacity: 1; filter: brightness(1); }
+  58% { opacity: 1; filter: brightness(1.8); }
+  72% { opacity: 0; transform: scale(1.12); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes map-unlock-label { 0%,70% { opacity: 0; } 90%,100% { opacity: 1; } }
+
+/* Correct/incorrect glow is BEHIND the card and fades in + out before the next screen. */
+.swipe-area { position: relative; isolation: isolate; }
+.swipe-area::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  border-radius: 45%; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, var(--answer-glow-core) 0%, var(--answer-glow-mid) 35%, transparent 72%);
+  filter: blur(14px);
+}
+.swipe-area.is-feedback-success { --answer-glow-core: rgba(65, 255, 158, .72); --answer-glow-mid: rgba(29, 202, 131, .32); }
+.swipe-area.is-feedback-error { --answer-glow-core: rgba(255, 76, 95, .75); --answer-glow-mid: rgba(220, 36, 66, .35); }
+.swipe-area.is-feedback-success::before,
+.swipe-area.is-feedback-error::before { animation: answer-feedback-glow .98s ease-in-out both; }
+.swipe-area.is-feedback-success .swipe-card { animation: answer-card-success .98s ease-in-out both; }
+.swipe-area.is-feedback-error .swipe-card { animation: answer-card-error .98s ease-in-out both; }
+@keyframes answer-feedback-glow { 0% { opacity: 0; transform: scale(.75); } 24% { opacity: 1; transform: scale(1.12); } 62% { opacity: .9; transform: scale(1.08); } 100% { opacity: 0; transform: scale(1.16); } }
+@keyframes answer-card-success { 0%,100% { box-shadow: 0 19px 45px rgba(0,0,0,.38); } 35% { box-shadow: 0 12px 44px rgba(57,247,144,.60); } }
+@keyframes answer-card-error { 0%,100% { box-shadow: 0 19px 45px rgba(0,0,0,.38); } 35% { box-shadow: 0 12px 44px rgba(245,67,88,.65); } }
+.play-topline-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.sound-toggle { background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 9px; color: #c9ded8; padding: 7px 11px; font-size: 11px; line-height: 1; white-space: nowrap; }
+.sound-toggle[aria-pressed="false"] { color: #80959d; }
+.sound-toggle:hover { border-color: var(--aqua); }
+@media(max-width:640px) { .play-topline-actions { gap: 7px; } .sound-toggle { font-size: 9px; padding: 7px 8px; } }
 @media(max-width:640px) {
   .journey { --track-step: clamp(92px, 15dvh, 114px); --track-top: 20px; --track-bottom: 90px; }
   .journey .path-stop { width: 104px; }
@@ -220,6 +270,8 @@ body {
 }
 @media(max-height:475px) { .map-gesture-hint { display: none; } }
 @media(prefers-reduced-motion:reduce) {
-  .map-unlock-banner,.path-stop--just-completed .path-node,.path-stop--just-unlocked .path-node,.path-stop--just-unlocked .path-node::before { animation: none !important; }
-  .path-stop--just-unlocked .path-node::before { opacity: 0; }
+  .map-unlock-banner,.path-stop--just-completed .path-node,.path-stop--unlock-animating .path-node,.path-stop--unlock-animating .path-node::before,.path-stop--unlock-animating .path-node::after,.swipe-area::before,.swipe-area .swipe-card { animation: none !important; }
+  .path-stop--unlock-animating .path-node::before { opacity: 0; }
+  .swipe-area.is-feedback-success::before { opacity: .4; }
+  .swipe-area.is-feedback-error::before { opacity: .4; }
 }
