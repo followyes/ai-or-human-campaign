@@ -4,7 +4,8 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Campaign v0.6.0 — dynamiczna mapa i administracja zdjęciami.**
+**Campaign v0.7.0 — przewijana mapa i animacja odblokowywania po wygranej.**
+Po ukończeniu poziomu gracz automatycznie wraca do mapy. Mapa ma jedną pionową, ciągłą ścieżkę; na telefonie jest przewijana palcem, a na PC kółkiem albo przez przytrzymanie i przeciągnięcie lewym przyciskiem myszy. Odblokowanie kolejnego etapu jest animowane.
 Menu główne (`index.html`) zawiera tylko przycisk **Kampania**, który otwiera `campaign.html`.
 Panel administracyjny działa pod `/admin/` z Supabase Auth.
 Pięć zwykłych poziomów (po 5 zdjęć) i boss (10 zdjęć) tworzą powtarzalny cykl.
@@ -55,7 +56,7 @@ Pełna dokumentacja projektu (AGENTS.md, ROADMAP.md, CHANGELOG.md, CONTINUE_IN_N
 - Każda błędna odpowiedź odbiera jedno serce i od razu kończy próbę. Następne podejście rozpoczyna ten sam poziom od pierwszej karty, z przetasowaną kolejnością; ukończone poziomy nie są cofane. Gdy serca spadną do zera, trzeba poczekać na regenerację (3 minuty na serce).
 - Boss ma testowy limit 60 sekund; przekroczenie odejmuje 1 serce i kończy próbę.
 - Wyjście z rozgrywki na mapę w połowie poziomu porzuca tę próbę; ukończone poziomy i serca pozostają zapisane.
-- Interfejs kampanii jest dopasowany do jednego ekranu (bez przewijania na typowych rozdzielczościach PC i smartfonów). Przed produkcją sprawdzić także powiększenie przeglądarki i urządzenia docelowe.
+- Interfejs gry mieści się na jednym ekranie, a ciągła mapa poziomów przewija się wewnątrz panelu (nie przewija się cała strona). Przed produkcją sprawdzić także powiększenie przeglądarki i urządzenia docelowe.
 - Testy automatyczne i test w przeglądarce w trybie demonstracyjnym nie zastępują testów na docelowych urządzeniach.
 
 

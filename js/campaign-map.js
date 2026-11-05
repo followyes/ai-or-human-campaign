@@ -18,12 +18,19 @@ const image = $("#campaign-image");
 const feedback = $("#play-feedback");
 const answerButtons = [$("#answer-human"), $("#answer-ai")];
 const LIVE_STORAGE_KEY = "ai-or-human.campaign.live.v01";
+const mapScroller = $("#map-scroll");
+const journey = $("#journey");
+const unlockBanner = $("#map-unlock-banner");
+const PATH_X = [50, 72, 29, 70, 32, 61];
+const UNLOCK_ANIMATION_MS = 2650;
 let currentStorageKey = STORAGE_KEY;
 let activeStages = STAGES;
 let sourceLoading = false;
 let contentSource = "demo";
-let worldPage = 0;
-const STAGES_PER_WORLD = 6;
+let unlockState = null;
+let unlockTimeout = null;
+let layoutFrame = null;
+let initialMapCentered = false;
 
 function setContentNotice(text, demo = true) {
   const note = $("#campaign-source-note");
@@ -101,46 +108,170 @@ function setScreen(name) {
   resultView.hidden = name !== "result";
   if (name === "map") {
     renderMap();
-    if (previousScreen !== 'map' && contentSource === 'supabase') void initializeCampaignSource();
+    if (previousScreen !== 'map' && contentSource === 'supabase' && !unlockState) void initializeCampaignSource();
   }
 
 }
 
+/** The complete campaign is one continuous, vertically scrollable track. */
 function renderMap() {
   progress = keepLiveFields(regenerate(progress), progress);
   redrawHearts();
   const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
   progressLabel.textContent = `${doneCount} / ${activeStages.length}`;
-  const pages = Math.max(1, Math.ceil(activeStages.length / STAGES_PER_WORLD));
-  worldPage = Math.min(worldPage, pages-1);
-  $("#world-label").textContent = `ŚWIAT ${String(worldPage + 1).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`;
-  $("#world-prev").disabled = worldPage === 0;
-  $("#world-next").disabled = worldPage >= pages - 1;
+  $("#world-label").textContent = `TWOJA ŚCIEŻKA • ${activeStages.length} ETAPÓW`;
+  journey.style.height = `calc(${Math.max(0, activeStages.length - 1)} * var(--track-step) + var(--track-top) + var(--track-bottom))`;
   stops.replaceChildren();
-  activeStages.slice(worldPage * STAGES_PER_WORLD, (worldPage+1)*STAGES_PER_WORLD).forEach((stage) => {
+  activeStages.forEach((stage, index) => {
     const done = contentSource === 'supabase' ? (progress.completedStageIds || []).includes(stage.uid) : stage.id <= progress.completed;
     const unlocked = contentSource === 'supabase' ? isStableStageUnlocked(progress, stage, activeStages) : isStageUnlocked(progress, stage.id);
-    const item = document.createElement("li");
-    item.className = `path-stop ${done ? "path-stop--completed" : unlocked ? "path-stop--available" : "path-stop--locked"}`;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `path-node ${done ? "path-node--completed" : unlocked ? "path-node--available" : "path-node--locked"}${stage.isBoss ? " path-node--boss" : ""}`;
+    const item = document.createElement('li');
+    item.className = `path-stop ${done ? 'path-stop--completed' : unlocked ? 'path-stop--available' : 'path-stop--locked'}`;
+    item.dataset.stageUid = stage.uid || String(stage.id);
+    item.style.setProperty('--stage-index', index);
+    item.style.setProperty('--stage-x', `${PATH_X[index % PATH_X.length]}%`);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `path-node ${done ? 'path-node--completed' : unlocked ? 'path-node--available' : 'path-node--locked'}${stage.isBoss ? ' path-node--boss' : ''}`;
     button.disabled = !unlocked || sourceLoading;
-    button.title = unlocked ? `Zagraj: ${stage.isBoss ? "Boss" : `Poziom ${stage.id}`}` : "Najpierw ukończ poprzednie poziomy";
-    button.setAttribute("aria-label", button.title);
-    button.innerHTML = `<span class="path-node__symbol" aria-hidden="true">${!unlocked ? "♙" : stage.isBoss ? "♛" : done ? "★" : stage.id}</span>`;
-    button.addEventListener("click", () => startStage(stage));
-    const label = document.createElement("span");
-    label.className = "path-stop__title";
-    label.textContent = stage.isBoss ? "BOSS" : `Poziom ${stage.id}`;
-    const subtitle = document.createElement("span");
-    subtitle.className = "path-stop__subtitle";
-    subtitle.textContent = done ? "Ukończony · zagraj ponownie" : !unlocked ? "Zablokowany" : `${stage.images.length} kart · rozpocznij`;
+    button.title = unlocked ? `Zagraj: ${stage.isBoss ? 'Boss' : `Poziom ${stage.id}`}` : 'Najpierw ukończ poprzednie poziomy';
+    button.setAttribute('aria-label', button.title);
+    button.innerHTML = `<span class="path-node__symbol" aria-hidden="true">${!unlocked ? '♙' : stage.isBoss ? '♛' : done ? '★' : stage.id}</span>`;
+    button.addEventListener('click', () => startStage(stage));
+    const label = document.createElement('span');
+    label.className = 'path-stop__title';
+    label.textContent = stage.isBoss ? 'BOSS' : `Poziom ${stage.id}`;
+    const subtitle = document.createElement('span');
+    subtitle.className = 'path-stop__subtitle';
+    subtitle.textContent = done ? 'Ukończony · zagraj ponownie' : !unlocked ? 'Zablokowany' : `${stage.images.length} kart · rozpocznij`;
+    if (unlockState?.completedUid === item.dataset.stageUid) item.classList.add('path-stop--just-completed');
+    if (unlockState?.nextUid === item.dataset.stageUid) item.classList.add('path-stop--just-unlocked');
     item.append(button, label, subtitle);
     stops.append(item);
   });
+  requestJourneyLine();
   save();
 }
+
+function requestJourneyLine() {
+  if (layoutFrame !== null) cancelAnimationFrame(layoutFrame);
+  layoutFrame = requestAnimationFrame(() => {
+    layoutFrame = null;
+    updateJourneyLine();
+  });
+}
+
+function updateJourneyLine() {
+  if (screen !== 'map' || !journey.clientWidth) return;
+  const rect = journey.getBoundingClientRect();
+  const points = [...stops.querySelectorAll('.path-node')].map(node => {
+    const box = node.getBoundingClientRect();
+    return { x: box.left - rect.left + box.width / 2, y: box.top - rect.top + box.height / 2 };
+  });
+  const svg = $('#journey-line');
+  svg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  const d = points.map((point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = points[index - 1];
+    const halfY = (previous.y + point.y) / 2;
+    return `C ${previous.x} ${halfY} ${point.x} ${halfY} ${point.x} ${point.y}`;
+  }).join(' ');
+  $('#journey-path').setAttribute('d', d);
+}
+
+function findStageNode(uid) {
+  return [...stops.children].find(item => item.dataset.stageUid === String(uid))?.querySelector('.path-node') || null;
+}
+
+function scrollMapToStage(uid, behavior = 'smooth', partnerUid = null) {
+  const target = findStageNode(uid);
+  if (!target) return;
+  const targetRect = target.getBoundingClientRect();
+  const viewportRect = mapScroller.getBoundingClientRect();
+  let targetCenter = targetRect.top - viewportRect.top + mapScroller.scrollTop + targetRect.height / 2;
+  const partner = partnerUid && findStageNode(partnerUid);
+  if (partner) {
+    const partnerRect = partner.getBoundingClientRect();
+    const partnerCenter = partnerRect.top - viewportRect.top + mapScroller.scrollTop + partnerRect.height / 2;
+    targetCenter = (targetCenter + partnerCenter) / 2;
+  }
+  const maxScroll = Math.max(0, mapScroller.scrollHeight - mapScroller.clientHeight);
+  const destination = Math.max(0, Math.min(maxScroll, targetCenter - mapScroller.clientHeight / 2));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  mapScroller.scrollTo({ top: destination, behavior: reducedMotion ? 'instant' : behavior });
+}
+
+function showUnlockOnMap(stage, nextStage, wasCompleted) {
+  if (unlockTimeout !== null) clearTimeout(unlockTimeout);
+  const newlyUnlocked = nextStage && !wasCompleted && !(contentSource === 'supabase'
+    ? (progress.completedStageIds || []).includes(nextStage.uid)
+    : nextStage.id <= progress.completed);
+  unlockState = {
+    completedUid: stage.uid || String(stage.id),
+    nextUid: newlyUnlocked ? nextStage.uid || String(nextStage.id) : null
+  };
+  const completedName = stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
+  unlockBanner.textContent = newlyUnlocked
+    ? `${completedName} Odblokowano ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
+    : `${completedName} ${wasCompleted ? 'Świetnie, zagraj ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
+  unlockBanner.hidden = false;
+  // Immediately return to the map; the reveal never requires another button.
+  clearRunTimers();
+  run = null;
+  setScreen('map');
+  requestAnimationFrame(() => scrollMapToStage(
+    unlockState.nextUid || unlockState.completedUid,
+    'smooth',
+    unlockState.nextUid ? unlockState.completedUid : null
+  ));
+  unlockTimeout = window.setTimeout(() => {
+    unlockState = null;
+    unlockBanner.hidden = true;
+    stops.querySelectorAll('.path-stop--just-completed, .path-stop--just-unlocked').forEach(item => {
+      item.classList.remove('path-stop--just-completed', 'path-stop--just-unlocked');
+    });
+    unlockTimeout = null;
+    // Refresh the stage list after the visual reveal, never during its animation.
+    if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
+  }, UNLOCK_ANIMATION_MS);
+}
+
+// Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
+let mapDrag = null;
+let suppressMapClick = false;
+mapScroller.addEventListener('pointerdown', event => {
+  if (event.pointerType !== 'mouse' || event.button !== 0 || screen !== 'map') return;
+  mapDrag = { id: event.pointerId, y: event.clientY, startScroll: mapScroller.scrollTop, moved: false };
+});
+mapScroller.addEventListener('pointermove', event => {
+  if (!mapDrag || mapDrag.id !== event.pointerId) return;
+  const diff = event.clientY - mapDrag.y;
+  if (!mapDrag.moved && Math.abs(diff) < 7) return;
+  if (!mapDrag.moved) {
+    mapDrag.moved = true;
+    mapScroller.classList.add('is-grabbing');
+    try { mapScroller.setPointerCapture(event.pointerId); } catch {}
+  }
+  mapScroller.scrollTop = mapDrag.startScroll - diff;
+});
+function stopMapDrag(event) {
+  if (!mapDrag || mapDrag.id !== event.pointerId) return;
+  suppressMapClick = mapDrag.moved;
+  mapDrag = null;
+  mapScroller.classList.remove('is-grabbing');
+  try { if (mapScroller.hasPointerCapture(event.pointerId)) mapScroller.releasePointerCapture(event.pointerId); } catch {}
+  window.setTimeout(() => { suppressMapClick = false; }, 0);
+}
+mapScroller.addEventListener('pointerup', stopMapDrag);
+mapScroller.addEventListener('pointercancel', stopMapDrag);
+mapScroller.addEventListener('click', event => {
+  if (!suppressMapClick) return;
+  event.preventDefault();
+  event.stopPropagation();
+}, true);
+mapScroller.addEventListener('dragstart', event => event.preventDefault());
+window.addEventListener('resize', requestJourneyLine);
 
 function clearRunTimers() {
   if (feedbackTimeout !== null) window.clearTimeout(feedbackTimeout);
@@ -221,14 +352,14 @@ function showResult(title, message, symbol, nextStage, primaryLabel = "Kontynuuj
 function winRun() {
   if (!run) return;
   const stage = run.stage;
-  progress = contentSource === "supabase" ? markStableComplete(progress,stage.uid) : completeStage(progress, stage.id);
+  const wasCompleted = contentSource === 'supabase'
+    ? (progress.completedStageIds || []).includes(stage.uid)
+    : stage.id <= progress.completed;
+  progress = contentSource === 'supabase' ? markStableComplete(progress, stage.uid) : completeStage(progress, stage.id);
   save();
-  const nextStage = activeStages[activeStages.findIndex(s => s.uid === stage.uid) + 1] || null;
-  showResult(stage.isBoss ? "Boss pokonany!" : `Poziom ${stage.id} ukończony!`,
-    stage.isBoss ? "Boss pokonany! Możesz kontynuować na mapie lub powtórzyć etap." : `Zaliczone ${stage.images.length} kart. ${nextStage ? `Odblokowano ${nextStage.isBoss ? "bossa" : `poziom ${nextStage.id}`}.` : ""}`,
-    stage.isBoss ? "♛" : "★", nextStage);
+  const nextStage = activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
+  showUnlockOnMap(stage, nextStage, wasCompleted);
 }
-
 function loseRun(message, deductHeart) {
   if (!run) return;
   if (deductHeart) progress = keepLiveFields(takeHeart(progress), progress);
@@ -311,8 +442,6 @@ function endDrag(event) {
 card.addEventListener("pointerup", endDrag);
 card.addEventListener("pointercancel", endDrag);
 
-$("#world-prev").addEventListener('click', () => {worldPage=Math.max(0,worldPage-1);renderMap();});
-$("#world-next").addEventListener('click', () => {worldPage+=1;renderMap();});
 renderMap();
 
 async function initializeCampaignSource() {
@@ -343,8 +472,7 @@ async function initializeCampaignSource() {
           progress.completedStageIds = readStableCompletedIds(progress, activeStages);
           save();
         }
-        const firstUnfinished = activeStages.findIndex(s => !(progress.completedStageIds || []).includes(s.uid));
-        worldPage = Math.floor(Math.max(0,firstUnfinished) / STAGES_PER_WORLD);
+        initialMapCentered = false;
       }
       setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach. Postęp zapisany lokalnie.`, false);
     } else {
@@ -356,6 +484,11 @@ async function initializeCampaignSource() {
   } finally {
     sourceLoading = false;
     renderMap();
+    if (contentSource === 'supabase' && screen === 'map' && !initialMapCentered && !unlockState) {
+      initialMapCentered = true;
+      const current = activeStages.find(s => !(progress.completedStageIds || []).includes(s.uid)) || activeStages.at(-1);
+      if (current) requestAnimationFrame(() => scrollMapToStage(current.uid || String(current.id), 'instant'));
+    }
   }
 }
 

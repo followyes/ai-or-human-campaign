@@ -160,3 +160,66 @@ body {
 .world-navigation button{color:#a4e9da;border:1px solid rgba(144,230,210,.28);background:rgba(29,63,70,.55);border-radius:9px;font-size:11px;padding:5px 12px;cursor:pointer}
 .world-navigation button:disabled{opacity:.32;cursor:default}
 @media(max-height:650px){.world-navigation{padding:0 12px}.world-navigation button{font-size:9px;padding:2px 8px}}
+
+
+/* Campaign v0.7.0 — ONE vertical journey. Only the map panel scrolls, not the page. */
+.map-panel { position: relative; }
+.world-navigation { display: none !important; }
+.map-gesture-hint { flex: 0 0 auto; color: #9fbdc1; margin: 0; padding: 5px 16px; font-size: 10px; text-align: center; background: rgba(9,24,37,.32); }
+.path-scroll {
+  flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto;
+  overscroll-behavior: contain; overflow-anchor: none;
+  scrollbar-width: thin; scrollbar-color: #446875 transparent;
+  -webkit-overflow-scrolling: touch; touch-action: pan-y;
+  cursor: grab; user-select: none; -webkit-user-select: none;
+  padding: 0 4px;
+}
+.path-scroll.is-grabbing, .path-scroll.is-grabbing * { cursor: grabbing !important; }
+.path-scroll:focus-visible { outline: 2px solid var(--aqua); outline-offset: -3px; }
+.path-scroll::-webkit-scrollbar { width: 7px; }
+.path-scroll::-webkit-scrollbar-thumb { background: #466c75; border-radius: 9px; }
+.journey {
+  --track-step: clamp(104px, 18dvh, 136px);
+  --track-top: 25px; --track-bottom: 115px;
+  width: min(100%, 530px); max-width: 530px;
+  height: auto; position: relative; margin: 0 auto;
+}
+.journey .path-stop {
+  left: var(--stage-x) !important;
+  top: calc(var(--track-top) + var(--stage-index) * var(--track-step)) !important;
+  transform: translateX(-50%);
+  width: 134px;
+}
+.journey-line { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.journey-line path { stroke: rgba(103,151,161,.48); stroke-dasharray: 8 11; stroke-width: 4; }
+.map-unlock-banner {
+  position: absolute; z-index: 6; top: 66px; left: 50%; transform: translateX(-50%);
+  max-width: calc(100% - 22px); width: max-content; pointer-events: none;
+  padding: 10px 16px; border: 1px solid #d5be76; border-radius: 14px;
+  background: rgba(33,44,41,.96); color: #fff0bd;
+  font-size: 13px; font-weight: 850; text-align: center;
+  box-shadow: 0 12px 35px rgba(0,0,0,.35);
+  animation: map-banner-appear .35s ease both;
+}
+.path-stop--just-completed .path-node { animation: map-stage-finish 1.15s ease-out 1; }
+.path-stop--just-unlocked .path-node { animation: map-stage-unlock 1.35s .3s cubic-bezier(.15,.8,.3,1.12) both; }
+.path-stop--just-unlocked .path-node::before {
+  content: '🔒'; display: grid; place-items: center; position: absolute; z-index: 3;
+  inset: -3px; border-radius: inherit; background: #283c49; font-size: 23px;
+  animation: map-lock-open 1.2s .35s ease-in forwards; pointer-events: none;
+}
+@keyframes map-banner-appear { from { opacity: 0; transform: translate(-50%, -9px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes map-stage-finish { 0% { filter: brightness(1); transform: scale(.9); } 35% { filter: brightness(1.6); transform: scale(1.20); } 70% { transform: scale(.96); } 100% { filter: brightness(1); transform: scale(1); } }
+@keyframes map-stage-unlock { 0% { filter: brightness(.65); transform: scale(.68); } 48% { filter: brightness(1.8); transform: scale(1.25); } 100% { filter: brightness(1); transform: scale(1); } }
+@keyframes map-lock-open { 0%, 28% { opacity: 1; transform: scale(1); } 70% { opacity: .35; transform: translateY(-28px) rotate(20deg) scale(.72); } 100% { opacity: 0; transform: translateY(-45px) rotate(24deg) scale(.55); } }
+@media(max-width:640px) {
+  .journey { --track-step: clamp(92px, 15dvh, 114px); --track-top: 20px; --track-bottom: 90px; }
+  .journey .path-stop { width: 104px; }
+  .map-gesture-hint { font-size: 9px; padding: 4px 8px; }
+  .map-unlock-banner { top: 48px; font-size: 11px; padding: 9px 10px; }
+}
+@media(max-height:475px) { .map-gesture-hint { display: none; } }
+@media(prefers-reduced-motion:reduce) {
+  .map-unlock-banner,.path-stop--just-completed .path-node,.path-stop--just-unlocked .path-node,.path-stop--just-unlocked .path-node::before { animation: none !important; }
+  .path-stop--just-unlocked .path-node::before { opacity: 0; }
+}
