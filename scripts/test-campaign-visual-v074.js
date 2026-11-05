@@ -12,10 +12,10 @@ assert.match(js,/card\.classList\.add\('is-committed'\)/,'Committed card stays i
 assert.doesNotMatch(js,/window\.setTimeout\(\(\) => \{\s*if \(run === referenceRun\) clearSwipeVisual\(\);/,'Swipe no longer snaps back after 310ms');
 assert.match(js,/if \(!card\.hasAttribute\('data-swipe'\)\) applySwipeVisual\(type === 'ai' \? 120 : -120\)/,'Button or keyboard commits to side');
 assert.match(js,/card\.classList\.add\('is-card-switching'\)/,'Swap to next photo hidden for one paint');
-assert.match(js,/plate\.textContent = stage\.isBoss \? 'BOSS' : 'LEVEL'/,'Diamond has caption ribbon');
+assert.match(js,/plateTitle\.textContent = stageName\.toUpperCase\(\)/,'Diamond has descriptive caption ribbon');
 assert.match(js,/button\.append\(diamond, plate, pin\)/,'Marker contains diamond, ribbon and pin');
 assert.match(css,/\.path-node__diamond\s*\{[\s\S]*?rotate\(45deg\)/,'Map diamond is angled');
 assert.match(css,/\.path-node__pin\s*\{/,'Map marker includes pin');
-assert.match(html,/campaign\.css\?v=0\.7\.4/);
-assert.match(html,/campaign-map\.js\?v=0\.7\.4/);
+assert.match(html,/campaign\.css\?v=0\.7\.5/);
+assert.match(html,/campaign-map\.js\?v=0\.7\.5/);
 console.log('PASS: v0.7.4 choice colors, held swipe, reference map markers, no backend changes');

@@ -159,7 +159,8 @@ function renderMap() {
     button.type = 'button';
     button.className = `path-node ${done ? 'path-node--completed' : (unlocked && !revealLocked) ? 'path-node--available' : 'path-node--locked'}${stage.isBoss ? ' path-node--boss' : ''}`;
     button.disabled = !unlocked || sourceLoading || revealLocked || unlockState?.nextUid === uid;
-    button.title = unlocked ? `Zagraj: ${stage.isBoss ? 'Boss' : `Poziom ${stage.id}`}` : 'Najpierw ukończ poprzednie poziomy';
+    const stageName = stage.isBoss ? 'Boss' : `Poziom ${stage.id}`;
+    button.title = done ? `${stageName} ukończony — zagraj ponownie` : unlocked ? `Zagraj: ${stageName}` : 'Najpierw ukończ poprzednie poziomy';
     button.setAttribute('aria-label', revealLocked ? 'Trwa odblokowywanie poziomu' : button.title);
     const symbol = document.createElement('span');
     symbol.className = 'path-node__symbol';
@@ -172,13 +173,28 @@ function renderMap() {
     diamond.setAttribute('aria-hidden', 'true');
     diamond.append(symbol);
     const plate = document.createElement('span');
-    plate.className = 'path-node__plate';
+    plate.className = `path-node__plate${done ? ' path-node__plate--completed' : ''}`;
     plate.setAttribute('aria-hidden', 'true');
-    plate.textContent = stage.isBoss ? 'BOSS' : 'LEVEL';
+    const plateTitle = document.createElement('span');
+    plateTitle.className = 'path-node__plate-title';
+    plateTitle.textContent = stageName.toUpperCase();
+    const plateNote = document.createElement('span');
+    plateNote.className = 'path-node__plate-note';
+    plateNote.textContent = done ? 'UKOŃCZONY · ZAGRAJ PONOWNIE'
+      : revealLocked ? 'ODBLOCKOWYWANIE…'
+      : !unlocked ? 'ZABLOKOWANY' : 'GRAJ';
+    plate.append(plateTitle, plateNote);
     const pin = document.createElement('span');
     pin.className = 'path-node__pin';
     pin.setAttribute('aria-hidden', 'true');
     button.append(diamond, plate, pin);
+    if (done) {
+      const completedMark = document.createElement('span');
+      completedMark.className = 'path-node__done-mark';
+      completedMark.setAttribute('aria-hidden', 'true');
+      completedMark.textContent = '✓';
+      button.append(completedMark);
+    }
     button.addEventListener('click', () => startStage(stage));
     const label = document.createElement('span');
     label.className = 'path-stop__title';
@@ -279,6 +295,7 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
     // Animation shakes the actual lock, not a pseudo-element covering an active button.
     const item = [...stops.children].find(node => node.dataset.stageUid === unlockState.nextUid);
     item?.classList.remove('path-stop--unlock-pending');
+    if (item) void item.offsetWidth; // Commit the locked state before the desktop shake begins.
     item?.classList.add('path-stop--unlock-animating');
     const completedItem = [...stops.children].find(node => node.dataset.stageUid === unlockState.completedUid);
     completedItem?.classList.add('path-stop--just-completed');
@@ -298,6 +315,8 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
         }
         const subtitle = item.querySelector('.path-stop__subtitle');
         if (subtitle) subtitle.textContent = 'Odblokowano!';
+        const plateNote = item.querySelector('.path-node__plate-note');
+        if (plateNote) plateNote.textContent = 'ODBLOKOWANY · GRAJ';
         sounds.play('success');
         unlockSwapTimeout = null;
       }, reducedMotion ? 0 : UNLOCK_REVEAL_AT_MS);

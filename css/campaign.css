@@ -347,7 +347,7 @@ body {
 .path-stop--unlock-revealed .path-stop__subtitle { color:#a2ffe0;font-weight:900; }
 @keyframes v072-lock-tremble { 0%,11%{transform:translateX(0) rotate(0)} 16%,27%,41%,52%{transform:translateX(-5px) rotate(-6deg)} 21%,34%,47%,57%{transform:translateX(5px) rotate(6deg)} 64%{transform:scale(1.24) rotate(-3deg)} 78%{transform:scale(.94) rotate(2deg)} 100%{transform:scale(1) rotate(0)} }
 @keyframes v072-unlock-aura { 0%,28%{opacity:0;transform:translateX(-50%) scale(.45)} 52%,72%{opacity:1;transform:translateX(-50%) scale(1.22)} 100%{opacity:0;transform:translateX(-50%) scale(1.45)} }
-@keyframes v072-unlock-number { 0%{opacity:.15;transform:scale(.3) rotate(-20deg)} 55%{opacity:1;transform:scale(1.42) rotate(7deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
+@keyframes v072-unlock-number { 0%{opacity:.15;transform:rotate(-45deg) scale(.3)} 55%{opacity:1;transform:rotate(-45deg) scale(1.42)} 100%{opacity:1;transform:rotate(-45deg) scale(1)} }
 
 @media(prefers-reduced-motion:reduce) {
   .swipe-area.is-feedback-success::before,.swipe-area.is-feedback-error::before,
@@ -517,4 +517,91 @@ body {
   .path-node--boss .path-node__diamond { top: 0; width: 49px; height: 49px; }
   .path-node__plate { top: 47px; min-height: 22px; font-size:9px; }
   .path-node__pin { top: 79px; }
+}
+
+/* v0.7.5 — clearer completion state in the reference-style map markers. */
+.path-node__plate {
+  width: 146px;
+  min-height: 42px;
+  top: 70px;
+  padding: 5px 5px 4px;
+  flex-direction: column;
+  gap: 3px;
+  letter-spacing: .035em;
+}
+.path-node__plate::before, .path-node__plate::after { display: none; }
+.path-node__plate-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+.path-node__plate-note {
+  display: block;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: .015em;
+  white-space: nowrap;
+  opacity: .9;
+}
+.path-node__plate--completed { background: linear-gradient(180deg, #fffdf0, #dce5d7); }
+.path-node__plate--completed .path-node__plate-note { color: #42661a; }
+.path-node__done-mark {
+  position: absolute;
+  z-index: 7;
+  top: 0;
+  left: calc(50% + 24px);
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  border: 2px solid #eefbc7;
+  background: #92d650;
+  color: #203321;
+  font-size: 14px;
+  font-weight: 1000;
+  box-shadow: 0 3px 9px rgba(0,0,0,.35), 0 0 13px rgba(190,240,110,.6);
+  pointer-events: none;
+}
+.path-node__pin { top: 117px; }
+/* The plate is now the only caption: no tiny duplicated lines below the marker. */
+.journey .path-stop__title, .journey .path-stop__subtitle { display: none; }
+/* More pronounced, separate marker shake; the label remains upright, independent of path SVG. */
+.path-stop--unlock-animating .path-node { animation: v075-visible-unlock 1.45s cubic-bezier(.35,.1,.2,1) both; transform-origin: 50% 42px; }
+.path-stop--unlock-animating .path-node__diamond { animation: v075-diamond-pulse 1.45s ease-out both; }
+@keyframes v075-visible-unlock {
+  0%,12% { transform: translateX(0) rotate(0); }
+  17%,29%,42% { transform: translateX(-10px) rotate(-7deg); }
+  23%,35%,48% { transform: translateX(10px) rotate(7deg); }
+  57% { transform: translateX(-4px) rotate(-3deg) scale(1.09); }
+  72% { transform: translateX(0) rotate(0) scale(1.15); }
+  90% { transform: scale(.97); }
+  100% { transform: translateX(0) rotate(0) scale(1); }
+}
+@keyframes v075-diamond-pulse {
+  0%,40% { filter: brightness(1); }
+  58%,75% { filter: brightness(2.0); }
+  100% { filter: brightness(1.1); }
+}
+/* An explicit, visible state change even when OS/browser asks to reduce motion. */
+@media (prefers-reduced-motion: reduce) {
+  .path-stop--unlock-animating .path-node,
+  .path-stop--unlock-animating .path-node__diamond { animation: none !important; }
+  .path-stop--unlock-revealed .path-node__symbol { transform: rotate(-45deg) !important; opacity: 1; }
+}
+@media (max-width: 640px) {
+  .path-node__plate { top: 59px; width: 132px; min-height: 38px; padding: 5px 2px 3px; gap: 2px; }
+  .path-node__plate-title { font-size: 11px; }
+  .path-node__plate-note { font-size: 7px; }
+  .path-node__pin { top: 99px; }
+  .path-node__done-mark { top: 0; left: calc(50% + 19px); width: 20px; height: 20px; font-size: 12px; }
+}
+@media (max-height: 475px) {
+  .path-node__plate { top: 47px; width: 124px; min-height: 33px; }
+  .path-node__plate-title { font-size: 10px; }
+  .path-node__plate-note { font-size: 7px; }
+  .path-node__pin { top: 82px; }
 }

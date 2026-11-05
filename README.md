@@ -4,8 +4,8 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Campaign v0.7.4 — przewijana mapa i dopracowana nawigacja.**
-Po ukończeniu poziomu gracz automatycznie wraca do mapy. Mapa ma jedną pionową ścieżkę z rombowymi oznaczeniami etapów; na telefonie przewija się palcem, a na PC kółkiem albo przeciągając myszką. Odblokowanie kolejnego etapu jest animowane. AI oznaczamy kolorem niebieskim, Human magenta, a zielony/czerwony informują wyłącznie o poprawnej/błędnej odpowiedzi.
+**Campaign v0.7.5 — czytelne oznaczanie ukończonych etapów i korekta animacji.**
+Po ukończeniu poziomu gracz automatycznie wraca do mapy. Mapa ma jedną pionową ścieżkę z rombowymi oznaczeniami etapów; ukończone etapy mają znacznik ✓ i informacje o możliwości powtórzenia na tabliczce; na telefonie przewija się palcem, a na PC kółkiem albo przeciągając myszką. Odblokowanie kolejnego etapu jest animowane. AI oznaczamy kolorem niebieskim, Human magenta, a zielony/czerwony informują wyłącznie o poprawnej/błędnej odpowiedzi.
 Menu główne (`index.html`) zawiera tylko przycisk **Kampania**, który otwiera `campaign.html`.
 Panel administracyjny działa pod `/admin/` z Supabase Auth.
 Pięć zwykłych poziomów (po 5 zdjęć) i boss (10 zdjęć) tworzą powtarzalny cykl.
