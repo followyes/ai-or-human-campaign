@@ -15,7 +15,7 @@ import {
   getAdminStorageUsage,
   listGameImages,
   registerPreparedImage
-} from "../js/admin-content.js";
+} from "../js/admin-content.js?v=0.8.0";
 import {
   AvifConversionError,
   formatBytes
@@ -26,11 +26,12 @@ import {
   summarizeUploadBatch
 } from "../js/upload-batch.js";
 import { DeleteDrainCoordinator } from "../js/delete-queue.js";
-import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js";
+import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js?v=0.8.0";
 import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js";
 import { AdminResultsPanel } from "../js/admin-results-ui.js";
-import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js";
+import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js?v=0.8.0";
 import { fetchAdminQueueStatus } from "../js/campaign-admin-status.js";
+import { fetchAdminChallengeStatus } from "../js/campaign-challenge-admin-status.js";
 
 const adminCard = document.querySelector("#admin-card");
 const tabLibrary = document.querySelector("#tab-library");
@@ -51,6 +52,37 @@ const loginTitle = document.querySelector("#login-title");
 const adminTitle = document.querySelector("#admin-title");
 
 const classInputs = [...document.querySelectorAll('input[name="content-class"]')];
+const trackInputs = [...document.querySelectorAll('input[name="upload-track"]')];
+const challengeTopicField = document.querySelector('#challenge-topic-field');
+const challengeTopicInput = document.querySelector('#challenge-topic');
+const challengeProgress = document.querySelector('#challenge-upload-progress');
+const challengeTitle = document.querySelector('#challenge-upload-title');
+const challengeCounts = document.querySelector('#challenge-upload-counts');
+const challengeFill = document.querySelector('#challenge-upload-fill');
+let challengeQueueRows = [];
+function selectedUploadTrack() { return trackInputs.find(x=>x.checked)?.value || 'main'; }
+function selectedChallengeTopic() { return challengeTopicInput.value.trim().replace(/\s+/g,' '); }
+function renderChallengePicker() {
+  const challenge=selectedUploadTrack()==='challenge';
+  challengeTopicField.classList.toggle('is-hidden',!challenge);
+  challengeProgress.classList.toggle('is-hidden',!challenge);
+  if (!challenge) return;
+  const topic=selectedChallengeTopic();
+  const found=challengeQueueRows.find(x=>x.key===topic.toLocaleLowerCase('pl-PL'));
+  const ai=Number(found?.ai)||0, human=Number(found?.human)||0;
+  challengeTitle.textContent=topic ? `Challenge: ${topic}` : 'Podaj nazwę tematu';
+  challengeCounts.textContent=`AI ${Math.min(10,ai)}/10 · HUMAN ${Math.min(10,human)}/10`;
+  challengeFill.style.width=`${Math.min(100,100*(Math.min(10,ai)+Math.min(10,human))/20)}%`;
+}
+async function refreshChallengeProgress() {
+  if (!currentSession) return;
+  try { challengeQueueRows=await fetchAdminChallengeStatus({session:currentSession}); }
+  catch(error) { console.warn('Challenge status:',error.message); challengeQueueRows=[]; }
+  renderChallengePicker();
+}
+for (const input of trackInputs) input.addEventListener('change',()=>{ renderChallengePicker(); syncBusyControls(); });
+challengeTopicInput.addEventListener('input',()=>{ renderChallengePicker(); syncBusyControls(); });
+
 const dropZone = document.querySelector("#drop-zone");
 const dropZoneTitle = dropZone.querySelector(".drop-zone-title");
 const dropZoneCopy = dropZone.querySelector(".drop-zone-copy");
@@ -220,7 +252,8 @@ function focusViewTarget(target) {
 }
 
 function uploadEntryReady() {
-  return Boolean(selectedContentClass()) && !uploadBusy && !deleteBusy && !moveBusy && !inventoryBusy;
+  return Boolean(selectedContentClass()) && (selectedUploadTrack()!=='challenge' ||
+    selectedChallengeTopic().length>=2) && !uploadBusy && !deleteBusy && !moveBusy && !inventoryBusy;
 }
 
 function selectedMoveCount(targetClass) {
@@ -242,13 +275,16 @@ function syncBusyControls() {
 
   const contentMutationBusy = uploadBusy || deleteBusy || moveBusy;
   const contentInteractionBusy = contentMutationBusy || inventoryBusy;
-  const categorySelected = Boolean(selectedContentClass());
+  const categorySelected=Boolean(selectedContentClass()) &&
+    (selectedUploadTrack()!=='challenge' || selectedChallengeTopic().length>=2);
   syncDropZonePrompt(categorySelected);
   dropZone.disabled = contentInteractionBusy;
   dropZone.classList.toggle("is-category-locked", !categorySelected);
   dropZone.setAttribute("aria-disabled", contentInteractionBusy || !categorySelected ? "true" : "false");
   fileInput.disabled = contentInteractionBusy || !categorySelected;
   for (const input of classInputs) input.disabled = contentInteractionBusy;
+  for (const input of trackInputs) input.disabled = contentInteractionBusy;
+  challengeTopicInput.disabled = contentInteractionBusy;
 
   logoutButton.disabled = authBusy || contentInteractionBusy || resultsPanel.busy;
   tabLibrary.disabled = contentInteractionBusy || resultsPanel.busy;
@@ -715,6 +751,7 @@ async function refreshInventory({ quiet = false, refreshStorage = true } = {}) {
     inventoryRows = [...await listGameImages({ session: currentSession })];
     renderInventory();
     await refreshAutoStatus();
+    await refreshChallengeProgress();
     setInventoryStatus();
 
     if (refreshStorage && currentSession) {
@@ -752,6 +789,7 @@ async function reconcileSingleDeleteAuthority() {
   inventoryRows = [...await listGameImages({ session: currentSession })];
   renderInventory();
   await refreshAutoStatus();
+  await refreshChallengeProgress();
 
   if (currentSession) await refreshStorageUsage({ force: true });
   return true;
@@ -838,7 +876,7 @@ async function handleDelete(imageId) {
     await refreshCurrentSessionForMutation();
     impact = await getCampaignPhotoImpact({session:currentSession,image});
   } catch(error) {setInventoryStatus(error.message,{error:true});return;}
-  const warning=impact ? `\n\nUWAGA: zostanie usunięty CAŁY ${impact.kind==='boss'?'boss':'poziom'} ${impact.display_number}. Pozostałe jego zdjęcia wrócą do puli.` : '';
+  const warning=impact ? `\n\nUWAGA: zostanie usunięty CAŁY ${impact.kind==='challenge' ? `Challenge „${impact.topic_name}”` : impact.kind==='boss'?'boss':`poziom ${impact.display_number}`}. Pozostałe jego zdjęcia wrócą do puli.` : '';
   const accepted = window.confirm(
     `Usunąć "${image.original_filename}" z kategorii ${image.content_class.toUpperCase()}?${warning}\n\nObraz zostanie trwale usunięty z biblioteki.`
   );
@@ -1044,6 +1082,8 @@ function showLogin(message = "", { morph = true, focus = true } = {}) {
   resultsPanel.clear();
   resetAdminTab();
   currentSession = null;
+  challengeQueueRows=[];
+  renderChallengePicker();
   inventoryRows = [];
   inventoryActionMode = "idle";
   selectedImageIds.clear();
@@ -1076,6 +1116,7 @@ async function establishAuthorizedSession(session, options = {}) {
   saveAdminSession(authorized);
   showAuthorized(authorized, options);
   void refreshInventory();
+  void refreshChallengeProgress();
   return authorized;
 }
 
@@ -1228,7 +1269,7 @@ async function prepareFile(file, contentClass, queueItem) {
   return uploadPreparationWorker.prepare(file, sourceInspection);
 }
 
-async function commitPreparedFile({ prepared, inventoryPreview }, contentClass, queueItem) {
+async function commitPreparedFile({ prepared, inventoryPreview }, contentClass, queueItem, campaignTrack, challengeTopic) {
   await refreshCurrentSessionForMutation();
 
   queueItem.set(
@@ -1243,7 +1284,9 @@ async function commitPreparedFile({ prepared, inventoryPreview }, contentClass, 
     contentClass,
     prepared,
     inventoryPreview,
-    sourceHashPreflightDone: true
+    sourceHashPreflightDone: true,
+    campaignTrack,
+    challengeTopic
   });
 
   queueItem.set(
@@ -1266,6 +1309,13 @@ async function handleFiles(fileList) {
   if (!files.length) return;
 
   const contentClass = selectedContentClass();
+  const campaignTrack = selectedUploadTrack();
+  const challengeTopic = campaignTrack==='challenge' ? selectedChallengeTopic() : null;
+  if (campaignTrack==='challenge' && (!challengeTopic || challengeTopic.length<2 || challengeTopic.length>60)) {
+    window.alert('Przed wgraniem Challenge wpisz temat (2–60 znaków).');
+    fileInput.value='';
+    return;
+  }
   if (!contentClass) {
     window.alert("Najpierw wybierz kategorię AI albo HUMAN.");
     fileInput.value = "";
@@ -1305,7 +1355,7 @@ async function handleFiles(fileList) {
 
     const batchResult = await runPipelinedUploadBatch(queueEntries, {
       prepareEntry: ({ file, queueItem }) => prepareFile(file, contentClass, queueItem),
-      commitEntry: ({ entry, prepared }) => commitPreparedFile(prepared, contentClass, entry.queueItem),
+      commitEntry: ({ entry, prepared }) => commitPreparedFile(prepared, contentClass, entry.queueItem, campaignTrack, challengeTopic),
       onSuccess: ({ result }) => {
         completedCount += 1;
         applyStorageUsageDelta(result?.storageBytesAdded);

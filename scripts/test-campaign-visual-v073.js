@@ -20,10 +20,10 @@ assert.match(css, /@keyframes v072-halo/, 'Strong green/red feedback has dedicat
 assert.match(css, /@keyframes v072-card-rim/, 'Card itself has strong colored rim');
 assert.match(js, /button\.className = `path-node \$\{done/, 'Visual state controls node class');
 assert.match(js, /const revealLocked = unlockState\?\.nextUid/, 'Next stage is truly locked during reveal');
-assert.match(js, /text\.textContent = corresponding\?\.isBoss \? '♛'/, 'Lock icon actually swaps to level icon');
+assert.match(js, /symbol\.textContent = nextStage\.isBoss \? '♛'/, 'Lock icon actually swaps to level icon');
 assert.match(css, /@keyframes v072-lock-tremble/, 'Lock trembles');
 assert.match(css, /@keyframes v072-unlock-number/, 'Level number reveal');
 assert.match(css, /@media\(prefers-reduced-motion:reduce\)/, 'Reduced motion behavior');
-assert.match(html, /campaign\.css\?v=0\.7\.5/, 'Fresh CSS cache version');
-assert.match(html, /campaign-map\.js\?v=0\.7\.5/, 'Fresh JavaScript cache version');
+assert.match(html, /campaign\.css\?v=0\.8\.0/, 'Fresh CSS cache version');
+assert.match(html, /campaign-map\.js\?v=0\.8\.0/, 'Fresh JavaScript cache version');
 console.log('PASS: v0.7.3 sound outside map hearts, smooth glow, straight horizontal swipe, no striped blur');

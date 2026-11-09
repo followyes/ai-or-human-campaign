@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const map = readFileSync(new URL('../js/campaign-map.js', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../css/campaign.css', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../campaign.html', import.meta.url), 'utf8');
+assert.match(map, /function playDiamondEffect\(/);
+assert.match(map, /diamond\.animate\(frames,/);
+assert.match(map, /function ensureUnlockMarkerVisible\(/);
+assert.match(map, /requestAnimationFrame\(\(\) => requestAnimationFrame/);
+assert.match(map, /const newlyUnlocked = !!\(nextStage/);
+assert.match(map, /playDiamondEffect\(item, nextUid \? 'unlock' : 'replay'\)/);
+assert.match(map, /if \(unlockState !== currentState\) return;/);
+assert.match(css, /\.path-stop--unlock-js \.path-node__diamond/);
+assert.match(html, /v=0\.8\.0/);
+console.log('PASS v0.8.0 WAAPI unlock, visible-before-start, replay completion, stable state');

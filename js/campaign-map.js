@@ -3,7 +3,7 @@ import {
   newProgress, sanitizeProgress, migratePreviousCooldown, regenerate, takeHeart,
   completeStage, isStageUnlocked, shuffleImages, formatTime
 } from "./campaign-core.js";
-import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js";
+import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js?v=0.8.0";
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
@@ -23,9 +23,11 @@ const mapScroller = $("#map-scroll");
 const journey = $("#journey");
 const unlockBanner = $("#map-unlock-banner");
 const PATH_X = [50, 72, 29, 70, 32, 61];
-const UNLOCK_SCROLL_DELAY_MS = 950;
-const UNLOCK_SHAKE_MS = 1450;
-const UNLOCK_REVEAL_AT_MS = 740;
+const CHALLENGE_BRANCH_STEP = 'var(--challenge-step)';
+let activeChallenges = [];
+const UNLOCK_SCROLL_DELAY_MS = 850;
+const UNLOCK_SHAKE_MS = 1500;
+const UNLOCK_REVEAL_AT_MS = 900;
 const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 600;
 const ANSWER_EFFECT_MS = 1120;
 const sounds = createCampaignSounds();
@@ -141,17 +143,30 @@ function renderMap() {
   progress = keepLiveFields(regenerate(progress), progress);
   redrawHearts();
   const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
-  progressLabel.textContent = `${doneCount} / ${activeStages.length}`;
-  $("#world-label").textContent = `TWOJA ŚCIEŻKA • ${activeStages.length} ETAPÓW`;
-  journey.style.height = `calc(${Math.max(0, activeStages.length - 1)} * var(--track-step) + var(--track-top) + var(--track-bottom))`;
+  const challengeDone = activeChallenges.filter(s=>(progress.completedStageIds || []).includes(s.uid)).length;
+  progressLabel.textContent = `${doneCount} / ${activeStages.length}${activeChallenges.length ? ` · ✦ ${challengeDone}/${activeChallenges.length}` : ''}`;
+  $("#world-label").textContent = `TWOJA ŚCIEŻKA • ${activeStages.length} ETAPÓW${activeChallenges.length ? ` · ${activeChallenges.length} CHALLENGE` : ''}`;
+  // Challenges add extra scroll space BETWEEN main nodes, but never change main order.
+  const challengeGroups = new Map();
+  for (const challenge of activeChallenges) {
+    const knownIndex=activeStages.findIndex(s=>s.uid===challenge.anchorUid);
+    const anchorIndex=Math.max(0,knownIndex<0 ? activeStages.length-1 : knownIndex);
+    if (!challengeGroups.has(anchorIndex)) challengeGroups.set(anchorIndex,[]);
+    challengeGroups.get(anchorIndex).push(challenge);
+  }
+  journey.style.height = `calc(${Math.max(0,activeStages.length-1)} * var(--track-step) + ${activeChallenges.length} * var(--challenge-step) + var(--track-top) + var(--track-bottom))`;
   stops.replaceChildren();
+  let branchesBefore = 0;
   activeStages.forEach((stage, index) => {
+    const anchorBranchCount = challengeGroups.get(index)?.length || 0;
+    const branchCountBeforeThis = branchesBefore;
     const done = contentSource === 'supabase' ? (progress.completedStageIds || []).includes(stage.uid) : stage.id <= progress.completed;
     const unlocked = contentSource === 'supabase' ? isStableStageUnlocked(progress, stage, activeStages) : isStageUnlocked(progress, stage.id);
     const item = document.createElement('li');
     item.className = `path-stop ${done ? 'path-stop--completed' : unlocked ? 'path-stop--available' : 'path-stop--locked'}`;
     item.dataset.stageUid = stage.uid || String(stage.id);
     item.style.setProperty('--stage-index', index);
+    item.style.setProperty('--track-y', `calc(${index} * var(--track-step) + ${branchCountBeforeThis} * var(--challenge-step))`);
     item.style.setProperty('--stage-x', `${PATH_X[index % PATH_X.length]}%`);
     const uid = item.dataset.stageUid;
     const revealLocked = unlockState?.nextUid === uid && unlockState.phase !== 'revealed';
@@ -209,6 +224,45 @@ function renderMap() {
     }
     item.append(button, label, subtitle);
     stops.append(item);
+    const branches=challengeGroups.get(index)||[];
+    for (let branchIndex=0;branchIndex<branches.length;branchIndex++) {
+      const challenge=branches[branchIndex];
+      const finished=(progress.completedStageIds || []).includes(challenge.uid);
+      const branch=document.createElement('li');
+      branch.className=`path-stop path-stop--challenge ${finished?'path-stop--completed':'path-stop--available'}`;
+      branch.dataset.stageUid=challenge.uid;
+      branch.dataset.anchorUid=stage.uid || String(stage.id);
+      branch.style.setProperty('--track-y',`calc(${index} * var(--track-step) + ${branchCountBeforeThis + branchIndex} * var(--challenge-step) + 106px)`);
+      branch.style.setProperty('--stage-x',`${PATH_X[index % PATH_X.length] > 50 ? 13 : 87}%`);
+      const challengeButton=document.createElement('button');
+      challengeButton.type='button';
+      challengeButton.className=`path-node path-node--challenge ${finished?'path-node--completed':'path-node--available'}`;
+      challengeButton.disabled=sourceLoading;
+      challengeButton.title=`Challenge Level: ${challenge.topic} · 20 kart · ${finished?'zagraj ponownie':'zagraj'}`;
+      challengeButton.setAttribute('aria-label',challengeButton.title);
+      const diamond=document.createElement('span');
+      diamond.className='path-node__diamond';
+      diamond.setAttribute('aria-hidden','true');
+      const symbol=document.createElement('span');
+      symbol.className='path-node__symbol';
+      symbol.textContent='✦';
+      diamond.append(symbol);
+      const plate=document.createElement('span');
+      plate.className='path-node__plate';
+      plate.setAttribute('aria-hidden','true');
+      const title=document.createElement('span'); title.className='path-node__plate-title'; title.textContent='CHALLENGE LEVEL';
+      const note=document.createElement('span'); note.className='path-node__plate-note'; note.textContent=challenge.topic;
+      plate.append(title,note);
+      const pin=document.createElement('span'); pin.className='path-node__pin';pin.setAttribute('aria-hidden','true');
+      challengeButton.append(diamond,plate,pin);
+      if (finished) {
+        const check=document.createElement('span');check.className='path-node__done-mark';check.textContent='✓';check.setAttribute('aria-hidden','true');challengeButton.append(check);
+      }
+      challengeButton.addEventListener('click',()=>startStage(challenge));
+      branch.append(challengeButton);
+      stops.append(branch);
+    }
+    branchesBefore+=anchorBranchCount;
   });
   requestJourneyLine();
   save();
@@ -225,7 +279,7 @@ function requestJourneyLine() {
 function updateJourneyLine() {
   if (screen !== 'map' || !journey.clientWidth) return;
   const rect = journey.getBoundingClientRect();
-  const points = [...stops.querySelectorAll('.path-node')].map(node => {
+  const points = [...stops.querySelectorAll('.path-stop:not(.path-stop--challenge) .path-node')].map(node => {
     const box = node.getBoundingClientRect();
     return { x: box.left - rect.left + box.width / 2, y: box.top - rect.top + box.height / 2 };
   });
@@ -239,6 +293,19 @@ function updateJourneyLine() {
     return `C ${previous.x} ${halfY} ${point.x} ${halfY} ${point.x} ${point.y}`;
   }).join(' ');
   $('#journey-path').setAttribute('d', d);
+  for (const oldBranch of svg.querySelectorAll('.journey-branch')) oldBranch.remove();
+  for (const branch of stops.querySelectorAll('.path-stop--challenge')) {
+    const from=findStageNode(branch.dataset.anchorUid);
+    const to=branch.querySelector('.path-node');
+    if (!from || !to) continue;
+    const a=from.getBoundingClientRect(),b=to.getBoundingClientRect();
+    const x1=a.left-rect.left+a.width/2,y1=a.top-rect.top+a.height/2;
+    const x2=b.left-rect.left+b.width/2,y2=b.top-rect.top+b.height/2;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+    line.setAttribute('class','journey-branch');
+    line.setAttribute('d',`M ${x1} ${y1} Q ${(x1+x2)/2} ${(y1+y2)/2-40} ${x2} ${y2}`);
+    svg.append(line);
+  }
 }
 
 function findStageNode(uid) {
@@ -263,73 +330,120 @@ function scrollMapToStage(uid, behavior = 'smooth', partnerUid = null) {
   mapScroller.scrollTo({ top: destination, behavior: reducedMotion ? 'instant' : behavior });
 }
 
+// v0.7.6: Animate the actual diamond using Web Animations instead of relying
+// on CSS animation classes alone. The reveal is tied to a visible map marker.
+function playDiamondEffect(item, kind = 'unlock') {
+  const diamond = item?.querySelector('.path-node__diamond');
+  if (!diamond || typeof diamond.animate !== 'function') return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  item.classList.add('path-stop--unlock-js');
+  const base = 'translateX(-50%) rotate(45deg)';
+  const frames = reduceMotion
+    ? [
+        { transform: base, filter: 'brightness(1)', opacity: 1 },
+        { transform: base, filter: 'brightness(1.95)', opacity: 1, offset: .55 },
+        { transform: base, filter: 'brightness(1.1)', opacity: 1 }
+      ]
+    : kind === 'replay'
+      ? [
+          { transform: `${base} scale(1)`, filter: 'brightness(1)' },
+          { transform: `${base} scale(1.12)`, filter: 'brightness(1.8)', offset: .45 },
+          { transform: `${base} scale(1)`, filter: 'brightness(1)' }
+        ]
+      : [
+          { transform: `${base} translateX(0px) scale(1)`, filter: 'brightness(1)' },
+          { transform: `${base} translateX(-11px) rotate(-6deg)`, filter: 'brightness(1.3)', offset: .15 },
+          { transform: `${base} translateX(11px) rotate(6deg)`, filter: 'brightness(1.5)', offset: .25 },
+          { transform: `${base} translateX(-10px) rotate(-5deg)`, filter: 'brightness(1.4)', offset: .37 },
+          { transform: `${base} translateX(10px) rotate(5deg)`, filter: 'brightness(1.7)', offset: .49 },
+          { transform: `${base} translateX(0px) scale(1.22)`, filter: 'brightness(2.1)', offset: .7 },
+          { transform: `${base} scale(1)`, filter: 'brightness(1.1)' }
+        ];
+  // Keeping `fill: none` ensures no tilted or distorted number stays after the reveal.
+  const animation = diamond.animate(frames, {
+    duration: reduceMotion ? 650 : kind === 'replay' ? 850 : UNLOCK_SHAKE_MS,
+    easing: 'ease-in-out', fill: 'none'
+  });
+  animation.addEventListener('finish', () => item.classList.remove('path-stop--unlock-js'), { once: true });
+}
+
+function ensureUnlockMarkerVisible(uid) {
+  const node = findStageNode(uid);
+  if (!node) return;
+  const marker = node.getBoundingClientRect();
+  const viewport = mapScroller.getBoundingClientRect();
+  // On desktop smooth scrolling may take longer than the old fixed delay.
+  // Never start an unlock offscreen: snap to the marker only if necessary.
+  if (marker.top < viewport.top + 18 || marker.bottom > viewport.bottom - 18) {
+    scrollMapToStage(uid, 'instant');
+  }
+}
+
 function showUnlockOnMap(stage, nextStage, wasCompleted) {
-  for (const id of [unlockTimeout, unlockRevealTimeout, unlockSwapTimeout]) if (id !== null) window.clearTimeout(id);
+  for (const id of [unlockTimeout, unlockRevealTimeout, unlockSwapTimeout]) {
+    if (id !== null) window.clearTimeout(id);
+  }
   unlockTimeout = unlockRevealTimeout = unlockSwapTimeout = null;
-  const newlyUnlocked = nextStage && !wasCompleted && !(contentSource === 'supabase'
+  const newlyUnlocked = !!(nextStage && !wasCompleted && !(contentSource === 'supabase'
     ? (progress.completedStageIds || []).includes(nextStage.uid)
-    : nextStage.id <= progress.completed);
-  unlockState = {
-    completedUid: stage.uid || String(stage.id),
-    nextUid: newlyUnlocked ? (nextStage.uid || String(nextStage.id)) : null,
-    phase: 'waiting'
-  };
-  const completedName = stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
+    : nextStage.id <= progress.completed));
+  const completedUid = stage.uid || String(stage.id);
+  const nextUid = newlyUnlocked ? (nextStage.uid || String(nextStage.id)) : null;
+  unlockState = { completedUid, nextUid, phase: 'waiting' };
+  const currentState = unlockState;
+  const completedName = stage.isChallenge ? `Challenge „${stage.topic}” ukończony!` : stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
   unlockBanner.textContent = newlyUnlocked
-    ? `${completedName} Odblokowano ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
-    : `${completedName} ${wasCompleted ? 'Świetnie, zagraj ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
+    ? `${completedName} Zaraz odblokujemy ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
+    : `${completedName} ${wasCompleted ? 'Zaliczone ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
   unlockBanner.hidden = false;
   clearRunTimers();
   run = null;
   setScreen('map');
-  requestAnimationFrame(() => scrollMapToStage(
-    unlockState.nextUid || unlockState.completedUid,
-    'smooth',
-    unlockState.nextUid ? unlockState.completedUid : null
-  ));
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  requestAnimationFrame(() => scrollMapToStage(nextUid || completedUid, 'smooth', nextUid ? completedUid : null));
+
   unlockRevealTimeout = window.setTimeout(() => {
-    if (screen !== 'map' || !unlockState) return;
-    unlockState.phase = 'animating';
-    // IMPORTANT: the next stage was rendered genuinely LOCKED in renderMap().
-    // Animation shakes the actual lock, not a pseudo-element covering an active button.
-    const item = [...stops.children].find(node => node.dataset.stageUid === unlockState.nextUid);
-    item?.classList.remove('path-stop--unlock-pending');
-    if (item) void item.offsetWidth; // Commit the locked state before the desktop shake begins.
-    item?.classList.add('path-stop--unlock-animating');
-    const completedItem = [...stops.children].find(node => node.dataset.stageUid === unlockState.completedUid);
-    completedItem?.classList.add('path-stop--just-completed');
-    if (item) {
+    if (screen !== 'map' || unlockState !== currentState) return;
+    const uid = nextUid || completedUid;
+    ensureUnlockMarkerVisible(uid);
+    // Allow the new scroll/layout to paint before starting on the desktop.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (screen !== 'map' || unlockState !== currentState) return;
+      const item = [...stops.children].find(node => node.dataset.stageUid === uid);
+      if (!item) return;
+      unlockState.phase = 'animating';
+      item.classList.remove('path-stop--unlock-pending');
+      item.classList.add(nextUid ? 'path-stop--unlock-animating' : 'path-stop--just-completed');
+      playDiamondEffect(item, nextUid ? 'unlock' : 'replay');
+      if (!nextUid) return;
       unlockSwapTimeout = window.setTimeout(() => {
-        if (screen !== 'map' || !unlockState || unlockState.nextUid !== item.dataset.stageUid) return;
+        if (screen !== 'map' || unlockState !== currentState) return;
         unlockState.phase = 'revealed';
         item.classList.add('path-stop--unlock-revealed');
         const button = item.querySelector('.path-node');
-        const text = button?.querySelector('.path-node__symbol');
-        if (button && text) {
-          button.classList.remove('path-node--locked');
-          button.classList.add('path-node--available');
-          const corresponding = activeStages.find(s => (s.uid || String(s.id)) === item.dataset.stageUid);
-          text.textContent = corresponding?.isBoss ? '♛' : String(corresponding?.id || nextStage.id);
+        const symbol = button?.querySelector('.path-node__symbol');
+        if (button && symbol) {
+          button.classList.replace('path-node--locked', 'path-node--available');
+          symbol.textContent = nextStage.isBoss ? '♛' : String(nextStage.id);
           button.setAttribute('aria-label', 'Poziom odblokowany');
         }
-        const subtitle = item.querySelector('.path-stop__subtitle');
-        if (subtitle) subtitle.textContent = 'Odblokowano!';
         const plateNote = item.querySelector('.path-node__plate-note');
         if (plateNote) plateNote.textContent = 'ODBLOKOWANY · GRAJ';
+        const subtitle = item.querySelector('.path-stop__subtitle');
+        if (subtitle) subtitle.textContent = 'Odblokowano!';
         sounds.play('success');
         unlockSwapTimeout = null;
-      }, reducedMotion ? 0 : UNLOCK_REVEAL_AT_MS);
-    }
+      }, UNLOCK_REVEAL_AT_MS);
+    }));
     unlockRevealTimeout = null;
-  }, reducedMotion ? 0 : UNLOCK_SCROLL_DELAY_MS);
+  }, UNLOCK_SCROLL_DELAY_MS);
   unlockTimeout = window.setTimeout(() => {
+    if (unlockState !== currentState) return;
     unlockState = null;
     unlockBanner.hidden = true;
     unlockTimeout = null;
     if (screen === 'map') renderMap();
     if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
-  }, reducedMotion ? 850 : UNLOCK_ANIMATION_MS);
+  }, UNLOCK_ANIMATION_MS);
 }
 
 // Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
@@ -407,9 +521,9 @@ function clearRunTimers() {
 
 function startStage(stage) {
   progress = keepLiveFields(regenerate(progress), progress);
-  if (sourceLoading || !(contentSource === 'supabase'
+  if (sourceLoading || (!stage.isChallenge && !(contentSource === 'supabase'
     ? isStableStageUnlocked(progress,stage,activeStages)
-    : isStageUnlocked(progress,stage.id))) return;
+    : isStageUnlocked(progress,stage.id)))) return;
   if (progress.hearts === 0) {
     showResult("Brak serc", "Poczekaj na regenerację jednego serca, aby rozpocząć poziom od początku.", "♥", null);
     return;
@@ -424,9 +538,10 @@ function startStage(stage) {
     started: false
   };
   $("#play-title").textContent = stage.isBoss ? "Finałowa próba" : stage.title;
-  $("#play-stage-label").textContent = stage.isBoss ? "BOSS" : `POZIOM ${stage.id}`;
+  $("#play-stage-label").textContent = stage.isChallenge ? 'CHALLENGE LEVEL' : stage.isBoss ? 'BOSS' : `POZIOM ${stage.id}`;
   $("#play-description").textContent = stage.isBoss
     ? "10 kart. Masz testowe 60 sekund na cały finał."
+    : stage.isChallenge ? `Temat: ${stage.topic}. 20 kart, 10 AI i 10 HUMAN. Jeden błąd kończy podejście.`
     : "W lewo: człowiek. W prawo: AI. Jeden błąd kończy podejście.";
   $("#play-timer").hidden = !stage.isBoss;
   setScreen("play");
@@ -486,7 +601,8 @@ function winRun() {
     : stage.id <= progress.completed;
   progress = contentSource === 'supabase' ? markStableComplete(progress, stage.uid) : completeStage(progress, stage.id);
   save();
-  const nextStage = activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
+  const nextStage = stage.isChallenge ? null :
+    activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
   showUnlockOnMap(stage, nextStage, wasCompleted);
 }
 function loseRun(message, deductHeart) {
@@ -610,6 +726,7 @@ async function initializeCampaignSource() {
     if (loaded.ready) {
       const firstLoad = contentSource !== 'supabase';
       activeStages = loaded.stages;
+      activeChallenges = loaded.challenges || [];
       contentSource = 'supabase';
       currentStorageKey = LIVE_STORAGE_KEY;
       if (firstLoad) {
@@ -620,7 +737,7 @@ async function initializeCampaignSource() {
         }
         initialMapCentered = false;
       }
-      setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach. Postęp zapisany lokalnie.`, false);
+      setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach${activeChallenges.length ? ` + ${activeChallenges.length} Challenge` : ''}. Postęp zapisany lokalnie.`, false);
     } else {
       setContentNotice(`W Supabase nie ma jeszcze gotowych poziomów (${loaded.count} kart). Działa DEMO.`);
     }

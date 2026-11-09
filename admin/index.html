@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex, nofollow, noarchive">
   <title>AI or Human — Admin</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./admin.css?v=0.6.0">
+  <link rel="stylesheet" href="./admin.css?v=0.8.0">
 </head>
 <body>
   <main class="admin-shell">
@@ -60,6 +60,22 @@
                 <span>HUMAN</span>
               </label>
             </fieldset>
+
+            <fieldset class="upload-track-picker" id="upload-track-picker">
+              <legend>Przypisz fotografie do</legend>
+              <label><input type="radio" name="upload-track" value="main" checked><span>Zwykła kampania</span></label>
+              <label><input type="radio" name="upload-track" value="challenge"><span>Challenge</span></label>
+            </fieldset>
+            <label class="challenge-topic-field is-hidden" id="challenge-topic-field">
+              <span>Temat wyzwania (wspólny dla 20 kart)</span>
+              <input id="challenge-topic" type="text" minlength="2" maxlength="60" placeholder="np. Rendery 3D" autocomplete="off">
+              <small>10 obrazów AI + 10 prac HUMAN w jednym temacie. Wyzwanie nie blokuje drogi głównej.</small>
+            </label>
+            <div class="challenge-upload-progress is-hidden" id="challenge-upload-progress" aria-live="polite">
+              <strong id="challenge-upload-title">Challenge · 0/20</strong>
+              <div class="challenge-upload-meter"><span id="challenge-upload-fill"></span></div>
+              <span id="challenge-upload-counts">AI 0/10 · HUMAN 0/10</span>
+            </div>
 
             <button class="drop-zone is-category-locked" id="drop-zone" type="button" aria-disabled="true">
               <span class="drop-zone-title">Wybierz kategorię</span>
@@ -145,7 +161,7 @@
               <div class="campaign-auto-track"><span id="campaign-auto-fill"></span></div>
               <p id="campaign-auto-note">Odczytywanie kolejki zdjęć…</p>
             </div>
-            <p class="campaign-safety-note">Usunięcie lub przeniesienie zdjęcia używanego w poziomie usuwa cały ten poziom. Pozostałe karty wracają do puli.</p>
+            <p class="campaign-safety-note">Usunięcie lub przeniesienie zdjęcia używanego w poziomie (także Challenge) usuwa cały ten poziom. Pozostałe karty wracają do odpowiedniej puli tematycznej.</p>
             <p class="inventory-status" id="inventory-status" role="status" aria-live="polite"></p>
             <div class="inventory-grid" id="inventory-grid"></div>
           </section>
@@ -197,6 +213,6 @@
     </section>
   </main>
 
-  <script type="module" src="./admin.js?v=0.6.0"></script>
+  <script type="module" src="./admin.js?v=0.8.0"></script>
 </body>
 </html>

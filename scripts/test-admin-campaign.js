@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync, existsSync} from 'node:fs';
 import {getCampaignPhotoImpact,CampaignPhotoProtectedError} from '../js/campaign-admin-guard.js';
 import {fetchAdminQueueStatus} from '../js/campaign-admin-status.js';
 const config={projectUrl:'https://new-campaign-001.supabase.co',publishableKey:'sb_publishable_test'};
@@ -25,8 +25,12 @@ assert.match(admin,/getCampaignPhotoImpact/);
 assert.match(admin,/refreshAutoStatus/);
 assert.match(admin,/await deleteGameImage/);
 assert.match(html,/id="campaign-auto-fill"/);
-const sql=readFileSync(new URL('../SUPABASE_SQL/06_automatyczne_poziomy.sql',import.meta.url),'utf8');
-for(const token of ['campaign_photo_queue','campaign_public_cards','campaign_stages','campaign_stage_cards',
-'campaign_library_before_change','campaign_admin_queue_status','campaign_assemble_queue']) assert.ok(sql.includes(token));
-assert.doesNotMatch(sql,/DELETE\s+FROM\s+storage\.objects/i,'Never delete Storage files via SQL');
+const sqlPath=new URL('../SUPABASE_SQL/06_automatyczne_poziomy.sql',import.meta.url);
+// Migration scripts are intentionally distributed OUTSIDE the public GitHub Pages repo.
+if (existsSync(sqlPath)) {
+  const sql=readFileSync(sqlPath,'utf8');
+  for(const token of ['campaign_photo_queue','campaign_public_cards','campaign_stages','campaign_stage_cards',
+  'campaign_library_before_change','campaign_admin_queue_status','campaign_assemble_queue']) assert.ok(sql.includes(token));
+  assert.doesNotMatch(sql,/DELETE\s+FROM\s+storage\.objects/i,'Never delete Storage files via SQL');
+}
 console.log('PASS: admin cascade warnings, queue status and migration safety contracts');

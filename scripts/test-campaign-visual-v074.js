@@ -16,6 +16,6 @@ assert.match(js,/plateTitle\.textContent = stageName\.toUpperCase\(\)/,'Diamond 
 assert.match(js,/button\.append\(diamond, plate, pin\)/,'Marker contains diamond, ribbon and pin');
 assert.match(css,/\.path-node__diamond\s*\{[\s\S]*?rotate\(45deg\)/,'Map diamond is angled');
 assert.match(css,/\.path-node__pin\s*\{/,'Map marker includes pin');
-assert.match(html,/campaign\.css\?v=0\.7\.5/);
-assert.match(html,/campaign-map\.js\?v=0\.7\.5/);
+assert.match(html,/campaign\.css\?v=0\.8\.0/);
+assert.match(html,/campaign-map\.js\?v=0\.8\.0/);
 console.log('PASS: v0.7.4 choice colors, held swipe, reference map markers, no backend changes');

@@ -605,3 +605,31 @@ body {
   .path-node__plate-note { font-size: 7px; }
   .path-node__pin { top: 82px; }
 }
+
+/* v0.7.6 — the actual diamond is animated from JavaScript (WAAPI).
+   Keep the ribbon and numerals upright; prevent legacy CSS keyframes from
+   competing with the compositor on desktop. */
+.path-stop--unlock-js .path-node,
+.path-stop--unlock-js .path-node__diamond {
+  animation: none !important;
+}
+/* Distinct transition even in reduced-motion mode: locked -> open, glow. */
+.path-stop--unlock-revealed .path-node__diamond {
+  transition: border-color .25s ease, box-shadow .25s ease, background .25s ease;
+}
+
+/* v0.8.0: themed challenge branches — optional, not part of main progression. */
+.journey { --challenge-step: clamp(142px,21dvh,168px); }
+.journey .path-stop { top:calc(var(--track-top) + var(--track-y)) !important; }
+.journey-line path.journey-branch { stroke:#bd81ef;stroke-width:3.5;stroke-dasharray:5 9;opacity:.75; }
+.journey .path-stop--challenge { z-index:2; width:146px; }
+.path-stop--challenge .path-node__diamond { background:#24183f; border-color:#b878fa; box-shadow:0 0 16px rgba(185,112,255,.25); }
+.path-stop--challenge .path-node--available .path-node__symbol { color:#dcbbff; }
+.path-stop--challenge .path-node--completed .path-node__symbol { color:#f3d4ff; }
+.path-stop--challenge .path-node__plate { border-bottom-color:#bd81ef;background:linear-gradient(180deg,#fdf8ff,#e6dafa); }
+.path-stop--challenge .path-node__plate-title { color:#5c288d;font-weight:900; }
+.path-stop--challenge .path-node__plate-note { color:#64417f;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.path-stop--challenge .path-node__done-mark { background:#cba8fb;color:#351653; }
+.path-stop--challenge .path-node:disabled { opacity:.8; }
+@media(max-width:640px){.journey .path-stop--challenge {width:122px;} .path-stop--challenge .path-node__plate-title {font-size:9px;} .path-stop--challenge .path-node__plate-note {font-size:9px;} }
+@media(max-width:365px){.journey .path-stop--challenge {width:104px;} .path-stop--challenge .path-node__plate-title {font-size:8px;} .path-stop--challenge .path-node__plate-note {font-size:8px;} }

@@ -3,7 +3,7 @@ import {
   copyStorageObject,
   removeStorageObject,
   updateGameImageMoveMetadata
-} from "./admin-content.js";
+} from "./admin-content.js?v=0.8.0";
 
 const VALID_CLASSES = new Set(["ai", "human"]);
 

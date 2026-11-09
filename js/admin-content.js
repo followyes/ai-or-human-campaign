@@ -630,6 +630,8 @@ export async function insertGameImageMetadata({
   width,
   height,
   fileSizeBytes,
+  campaignTrack = 'main',
+  challengeTopic = null,
   config = SUPABASE_PUBLIC_CONFIG,
   fetchImpl = globalThis.fetch
 } = {}) {
@@ -649,7 +651,9 @@ export async function insertGameImageMetadata({
     avif_sha256: avifSha256,
     width,
     height,
-    file_size_bytes: fileSizeBytes
+    file_size_bytes: fileSizeBytes,
+    campaign_track: campaignTrack,
+    challenge_topic: campaignTrack === 'challenge' ? challengeTopic?.trim() : null
   };
 
   const rows = await request(url, {
@@ -794,6 +798,8 @@ export async function registerPreparedImage({
   contentClass,
   prepared,
   inventoryPreview,
+  campaignTrack = 'main',
+  challengeTopic = null,
   sourceHashPreflightDone = false,
   config = SUPABASE_PUBLIC_CONFIG,
   fetchImpl = globalThis.fetch,
@@ -801,6 +807,11 @@ export async function registerPreparedImage({
 } = {}) {
   requireSession(session);
   requireContentClass(contentClass);
+  if (!['main','challenge'].includes(campaignTrack) ||
+    (campaignTrack === 'challenge' && (typeof challengeTopic !== 'string' ||
+      challengeTopic.trim().length < 2 || challengeTopic.trim().length > 60))) {
+    throw new AdminContentError('CHALLENGE_TOPIC_INVALID','Temat wyzwania powinien mieć od 2 do 60 znaków.');
+  }
 
   if (!prepared?.source?.sha256 || !prepared?.output?.sha256 || !prepared?.output?.blob) {
     throw new AdminContentError(
@@ -871,6 +882,8 @@ export async function registerPreparedImage({
       width: prepared.output.width,
       height: prepared.output.height,
       fileSizeBytes: prepared.output.size,
+      campaignTrack,
+      challengeTopic,
       config,
       fetchImpl
     });

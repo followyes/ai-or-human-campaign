@@ -8,7 +8,12 @@ async function copyRuntime(projectRoot, distRoot) {
   for (const entry of RUNTIME_ENTRIES) {
     const source = path.join(projectRoot, entry);
     const target = path.join(distRoot, entry);
-    const stat = await fs.stat(source);
+    let stat;
+    try { stat=await fs.stat(source); }
+    catch(error) {
+      if (error?.code==='ENOENT' && (entry==='classic.html' || entry==='campaign.html')) continue;
+      throw error;
+    }
 
     if (stat.isDirectory()) {
       await fs.cp(source, target, { recursive: true });

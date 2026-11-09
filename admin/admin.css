@@ -1137,3 +1137,19 @@ h2 {
 .campaign-auto-track{height:8px;margin-top:9px;border-radius:6px;overflow:hidden;background:#d6e6e1}
 .campaign-auto-track span{display:block;width:0;height:100%;background:#269d87;transition:width .2s}
 .campaign-auto-status p{font-size:11px;margin:8px 0 0;color:#597071}
+
+/* v0.8.0: optional challenge upload, independent from main-level queue. */
+.upload-track-picker {display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 8px;padding:0;border:0}
+.upload-track-picker legend {width:100%;font-size:12px;font-weight:750;color:#4c6370;margin-bottom:5px}
+.upload-track-picker label {cursor:pointer;position:relative}
+.upload-track-picker input {position:absolute;opacity:0;width:1px;height:1px}
+.upload-track-picker label span {display:block;padding:9px 15px;border:1px solid #d7e0e4;border-radius:24px;font-size:12px;font-weight:800}
+.upload-track-picker input:checked + span {background:#1e2730;color:#fff;border-color:#1e2730}
+.upload-track-picker input:focus-visible + span {outline:2px solid #6e56bf;outline-offset:3px}
+.challenge-topic-field {display:flex;flex-direction:column;gap:5px;margin:10px 0 10px;color:#263340;font-weight:750;font-size:12px}
+.challenge-topic-field input {border-radius:9px;border:1px solid #c7c9d2;padding:11px 12px;min-width:0;font:inherit}
+.challenge-topic-field small {font-size:11px;color:#66737a;font-weight:400;line-height:1.4}
+.challenge-upload-progress {background:#f7f2ff;border:1px solid #dfd1ff;border-radius:12px;padding:11px;margin:12px 0;color:#5b3a85;font-size:12px}
+.challenge-upload-progress strong {display:block;margin-bottom:8px}
+.challenge-upload-meter {height:7px;border-radius:100px;background:#e4d7f7;overflow:hidden;margin-bottom:5px}
+.challenge-upload-meter span {display:block;height:100%;background:#a46bea;transition:width .2s ease}

@@ -55,7 +55,7 @@ import {
   listGameImages,
   registerPreparedImage,
   updateGameImageMoveMetadata
-} from "../js/admin-content.js";
+} from "../js/admin-content.js?v=0.8.0";
 import {
   AVIF_ENCODER_MODULE_URL,
   INVENTORY_PREVIEW_MAX_HEIGHT,
@@ -660,7 +660,7 @@ async function testSeparateStreakCelebration() {
 }
 
 async function copyRuntimeFixture(targetRoot) {
-  for (const entry of ["index.html", "campaign.html", "classic.html", "css", "js", "admin", "assets"]) {
+  for (const entry of ["index.html", "campaign.html", "css", "js", "admin", "assets"]) {
     await fs.cp(path.join(projectRoot, entry), path.join(targetRoot, entry), { recursive: true });
   }
 }
@@ -2996,7 +2996,6 @@ async function testSupabaseOnlyBuild() {
   const result = await buildSite({ projectRoot: tempRoot });
   assert.equal(result.contentSource, "supabase");
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "index.html")));
-  assert.ok(await fs.stat(path.join(tempRoot, "dist", "classic.html")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "admin", "index.html")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "admin", "admin.js")));
   assert.ok(await fs.stat(path.join(tempRoot, "dist", "js", "content-source.js")));
@@ -3454,7 +3453,7 @@ async function testResultCelebrationLifecycle() {
 }
 
 async function testSourceContracts() {
-  const html = await fs.readFile(path.join(projectRoot, "classic.html"), "utf8");
+  const html = await fs.readFile(path.join(projectRoot, "index.html"), "utf8");
   const css = await fs.readFile(path.join(projectRoot, "css", "style.css"), "utf8");
   const game = await fs.readFile(path.join(projectRoot, "js", "game.js"), "utf8");
   const themeControllerSource = await fs.readFile(path.join(projectRoot, "js", "theme-controller.js"), "utf8");
@@ -4062,8 +4061,9 @@ assert.ok(/id="file-input"[\s\S]*?multiple[\s\S]*?disabled/m.test(adminHtml),
   "native file input must start disabled until AI/HUMAN is selected");
 assert.ok(adminJs.includes('function uploadEntryReady()'),
   "all upload-entry paths must share one category/busy readiness authority");
-assert.ok(adminJs.includes('Boolean(selectedContentClass()) && !uploadBusy && !deleteBusy && !moveBusy && !inventoryBusy'),
-  "upload-entry readiness must require a category and an idle content workspace");
+assert.ok(adminJs.includes('Boolean(selectedContentClass()) && (selectedUploadTrack()') &&
+  adminJs.includes('!uploadBusy && !deleteBusy && !moveBusy && !inventoryBusy'),
+  "upload-entry readiness must require category, Challenge topic when selected, and idle workspace");
 assert.ok(adminJs.includes('dropZone.classList.toggle("is-category-locked", !categorySelected)'),
   "drop zone visual lock must track category selection");
 assert.ok(adminJs.includes('fileInput.disabled = contentInteractionBusy || !categorySelected'),

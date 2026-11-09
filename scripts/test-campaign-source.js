@@ -24,7 +24,7 @@ assert.throws(()=>makeDynamicStages([...dynamic,dynamic[0]],CFG.projectUrl),Camp
 assert.throws(()=>makeDynamicStages(dynamic.slice(1),CFG.projectUrl),CampaignSourceError);
 assert.throws(()=>makeDynamicStages(dynamic.map((r,i)=>i===0?{...r,storage_path:'../unsafe.avif'}:r),CFG.projectUrl),CampaignSourceError);
 let seen;
-const full=await fetchCampaignStages({config:CFG,fetchImpl:async(u,o)=>{seen={url:u,options:o};return reply(dynamic);}});
+const full=await fetchCampaignStages({config:CFG,fetchImpl:async(u,o)=>{if (u.pathname.endsWith('/campaign_public_cards')) seen={url:u,options:o};return u.pathname.endsWith('/campaign_public_challenge_cards')?reply(null,false,404):reply(dynamic);}});
 assert.equal(full.ready,true);
 assert.equal(full.count,dynamic.length);
 assert.equal(full.stages.length,9);
