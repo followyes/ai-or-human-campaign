@@ -238,7 +238,7 @@ function normalizeInventoryRow(row, projectUrl) {
 }
 
 export function createStoragePath(contentClass, {
-  uuid = globalThis.crypto?.randomUUID?.()
+  uuid = globalThis.crypto?.randomUUID?.(), mimeType = 'image/avif'
 } = {}) {
   requireContentClass(contentClass);
 
@@ -249,10 +249,13 @@ export function createStoragePath(contentClass, {
     );
   }
 
-  return `${contentClass}/${uuid}.avif`;
+  const extension = mimeType === 'image/webp' ? 'webp' :
+    mimeType === 'image/avif' ? 'avif' : null;
+  if (!extension) throw new AdminContentError('IMAGE_MIME_UNSUPPORTED','Nieobsługiwany format wynikowy.');
+  return `${contentClass}/${uuid}.${extension}`;
 }
 
-export function createThumbnailStoragePath(storagePath) {
+export function createThumbnailStoragePath(storagePath, { mimeType = null } = {}) {
   if (typeof storagePath !== "string") {
     throw new AdminContentError(
       "THUMBNAIL_PATH_SOURCE_INVALID",
@@ -260,7 +263,7 @@ export function createThumbnailStoragePath(storagePath) {
     );
   }
 
-  const match = storagePath.match(/^(ai|human)\/(.+\.avif)$/i);
+  const match = storagePath.match(/^(ai|human)\/(.+)\.(avif|webp)$/i);
   if (!match || match[2].startsWith("_previews/")) {
     throw new AdminContentError(
       "THUMBNAIL_PATH_SOURCE_INVALID",
@@ -268,7 +271,10 @@ export function createThumbnailStoragePath(storagePath) {
     );
   }
 
-  return `${match[1].toLowerCase()}/_previews/v1/${match[2]}`;
+  const extension = mimeType === 'image/webp' ? 'webp' :
+    mimeType === 'image/avif' || mimeType == null ? (match[3].toLowerCase()) : null;
+  if (!extension) throw new AdminContentError('PREVIEW_MIME_UNSUPPORTED','Nieobsługiwany format miniatury.');
+  return `${match[1].toLowerCase()}/_previews/v1/${match[2]}.${extension}`;
 }
 
 export async function findImageByHash({
@@ -594,11 +600,10 @@ export async function uploadAvifObject({
 } = {}) {
   requireSession(session);
 
-  if (!(avifBlob instanceof Blob) || avifBlob.type !== "image/avif" || avifBlob.size <= 0) {
-    throw new AdminContentError(
-      "AVIF_BLOB_INVALID",
-      "Do Storage można wysłać wyłącznie prawidłowy AVIF."
-    );
+  if (!(avifBlob instanceof Blob) || !['image/avif','image/webp'].includes(avifBlob.type) || avifBlob.size <= 0 ||
+      !storagePath.toLowerCase().endsWith(avifBlob.type === 'image/avif' ? '.avif' : '.webp')) {
+    throw new AdminContentError('IMAGE_BLOB_INVALID',
+      'Format pliku nie zgadza się z rozszerzeniem ścieżki w Storage.');
   }
 
   const resolved = resolveConfig(config);
@@ -612,7 +617,7 @@ export async function uploadAvifObject({
     fetchImpl,
     method: "POST",
     headers: authHeaders(resolved.publishableKey, session.access_token, {
-      "Content-Type": "image/avif",
+      "Content-Type": avifBlob.type,
       "Cache-Control": "max-age=31536000"
     }),
     body: avifBlob
@@ -820,7 +825,7 @@ export async function registerPreparedImage({
     );
   }
 
-  if (!(inventoryPreview?.blob instanceof Blob) || inventoryPreview.blob.type !== "image/avif" || inventoryPreview.blob.size <= 0) {
+  if (!(inventoryPreview?.blob instanceof Blob) || !['image/avif','image/webp'].includes(inventoryPreview.blob.type) || inventoryPreview.blob.size <= 0) {
     throw new AdminContentError(
       "PREPARED_PREVIEW_INVALID",
       "Brak prawidłowego obrazu do wyświetlenia w bibliotece."
@@ -847,8 +852,8 @@ export async function registerPreparedImage({
     fetchImpl
   });
 
-  const storagePath = storagePathFactory(contentClass);
-  const thumbnailPath = createThumbnailStoragePath(storagePath);
+  const storagePath = storagePathFactory(contentClass, {mimeType:prepared.output.mimeType});
+  const thumbnailPath = createThumbnailStoragePath(storagePath,{mimeType:inventoryPreview.blob.type});
   let originalUploaded = false;
   let thumbnailUploaded = false;
 

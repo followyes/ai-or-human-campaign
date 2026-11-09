@@ -1153,3 +1153,21 @@ h2 {
 .challenge-upload-progress strong {display:block;margin-bottom:8px}
 .challenge-upload-meter {height:7px;border-radius:100px;background:#e4d7f7;overflow:hidden;margin-bottom:5px}
 .challenge-upload-meter span {display:block;height:100%;background:#a46bea;transition:width .2s ease}
+
+
+/* v0.8.1: selection appears only after choosing AI/HUMAN; Challenge is opt-in. */
+.upload-assignment { margin: 12px 0 14px; padding: 13px 14px; border-radius: 13px;
+  border: 1px solid #d8e3e7; background: #f7fafb; }
+.upload-assignment-heading { display: flex; justify-content: space-between; gap: 8px;
+  font-size: 12px; color: #253747; margin-bottom: 11px; flex-wrap: wrap; }
+.upload-assignment-heading span { color: #677780; font-size: 11px; }
+.challenge-checkbox-label { display: flex; align-items: center; gap: 11px;
+  padding: 11px 12px; border: 1px solid #ddd2ee; border-radius: 10px;
+  background: #fff; cursor: pointer; color: #253747; }
+.challenge-checkbox-label input { width: 19px; height: 19px; flex: none; accent-color: #7656c2; }
+.challenge-checkbox-label span { display: flex; flex-direction: column; gap: 3px; }
+.challenge-checkbox-label strong { font-size: 13px; }
+.challenge-checkbox-label small { font-size: 11px; color: #64717c; line-height: 1.4; }
+.challenge-topic-field { margin: 12px 0 0; }
+.challenge-topic-field input:focus { outline: 2px solid #a88bde; outline-offset: 2px; }
+.upload-assignment.is-hidden, .challenge-topic-field.is-hidden, .challenge-upload-progress.is-hidden { display: none !important; }

@@ -31,6 +31,6 @@ assert.equal(completedCount(progress,fetched.stages),0,'Challenge does not advan
 assert.equal(isStableStageUnlocked(progress,fetched.stages[0],fetched.stages),true);
 assert.ok(!readFileSync(new URL('../js/campaign-map.js',import.meta.url),'utf8').includes('activeStages.push(...activeChallenges)'),
   'Challenge stages are separate from main progression');
-assert.ok(readFileSync(new URL('../admin/index.html',import.meta.url),'utf8').includes('name="upload-track"'));
+assert.ok(readFileSync(new URL('../admin/index.html',import.meta.url),'utf8').includes('id="challenge-enabled"'));
 assert.ok(readFileSync(new URL('../js/admin-content.js',import.meta.url),'utf8').includes('challenge_topic'));
 console.log('PASS: themed 20-card challenges, strict 10/10 split, independent main progress, SQL guards');

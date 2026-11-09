@@ -55,7 +55,7 @@ import {
   listGameImages,
   registerPreparedImage,
   updateGameImageMoveMetadata
-} from "../js/admin-content.js?v=0.8.0";
+} from "../js/admin-content.js";
 import {
   AVIF_ENCODER_MODULE_URL,
   INVENTORY_PREVIEW_MAX_HEIGHT,
@@ -4068,8 +4068,8 @@ assert.ok(adminJs.includes('dropZone.classList.toggle("is-category-locked", !cat
   "drop zone visual lock must track category selection");
 assert.ok(adminJs.includes('fileInput.disabled = contentInteractionBusy || !categorySelected'),
   "native file input must remain disabled while the category is missing");
-assert.ok(adminJs.includes('input.addEventListener("change", syncBusyControls)'),
-  "AI/HUMAN selection must immediately resynchronize upload-entry state");
+assert.ok(adminJs.includes('input.addEventListener("change", () => { renderChallengePicker(); syncBusyControls(); })'),
+  "AI/HUMAN selection must show optional Challenge UI and resynchronize upload-entry state");
 assert.ok(/dropZone\.addEventListener\("click", \(\) => \{[\s\S]*?if \(uploadEntryReady\(\)\) fileInput\.click\(\);/m.test(adminJs),
   "desktop/mobile/keyboard activation must not open the picker before category selection");
 assert.ok(/for \(const eventName of \["dragenter", "dragover"\]\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?if \(uploadEntryReady\(\)\) dropZone\.classList\.add\("is-dragover"\)/m.test(adminJs),
@@ -4329,24 +4329,21 @@ assert.ok(!adminJs.includes('convertSourceFileToAvif') && !adminJs.includes('cre
   "Admin main thread must not directly execute full-resolution AVIF conversion or preview generation");
 assert.ok(adminJs.includes('uploadPreparationWorker.terminate()'),
   "batch closeout must release the preparation Worker and its WASM/canvas memory");
-assert.ok(uploadWorkerClientSource.includes('new Worker(new URL("./upload-preparation-worker.js", import.meta.url)') &&
+assert.ok(uploadWorkerClientSource.includes('new Worker(new URL("./upload-preparation-worker.js?v=0.8.1", import.meta.url)') &&
   uploadWorkerClientSource.includes('type: "module"'),
   "upload preparation must use a same-origin module Worker");
 assert.ok(uploadWorkerClientSource.includes('requestId') && uploadWorkerClientSource.includes('this.pending = new Map()'),
   "Worker client must correlate responses by explicit job id");
 assert.ok(uploadPreparationWorkerSource.includes('new OffscreenCanvas') && uploadPreparationWorkerSource.includes('createImageBitmap'),
   "heavy image decode/canvas work must execute in the preparation Worker");
-assert.ok(uploadPreparationWorkerSource.includes('encodeImageDataToAvif'),
-  "AVIF WASM encoding authority must execute from the Worker module");
+assert.ok(uploadPreparationWorkerSource.includes('canvas.convertToBlob') && !uploadPreparationWorkerSource.includes('encodeImageDataToAvif'),
+  "new images must use native WebP conversion without a third-party AVIF encoder");
 assert.ok(uploadPreparationWorkerSource.includes('encodePreviewFromDecoded(decoded, width, height)') &&
-  uploadPreparationWorkerSource.includes('captureProductionPixels(decoded, width, height)'),
+  uploadPreparationWorkerSource.includes('encodeProductionFromDecoded(decoded, width, height)'),
   "preview and production pixels must be derived from the same source decode");
-assert.ok(
-  uploadPreparationWorkerSource.indexOf('decoded.close?.();') >
-    uploadPreparationWorkerSource.indexOf('captureProductionPixels(decoded, width, height)') &&
-  uploadPreparationWorkerSource.indexOf('encodeProductionPixels(productionPixels, width, height)') >
-    uploadPreparationWorkerSource.indexOf('decoded.close?.();'),
-  "source bitmap must be released before full-resolution AVIF encode begins"
+assert.ok(uploadPreparationWorkerSource.includes('decoded.close?.();') &&
+  uploadPreparationWorkerSource.includes('releaseCanvas(canvas)'),
+  "native upload path must release decoded bitmap and canvas memory"
 );
 assert.ok(!uploadPreparationWorkerSource.includes('createInventoryPreviewAvif') &&
   !uploadPreparationWorkerSource.includes('document.createElement') &&

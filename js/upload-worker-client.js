@@ -8,7 +8,7 @@ function defaultWorkerFactory() {
     );
   }
 
-  return new Worker(new URL("./upload-preparation-worker.js", import.meta.url), {
+  return new Worker(new URL("./upload-preparation-worker.js?v=0.8.1", import.meta.url), {
     type: "module",
     name: "ai-or-human-upload-preparation"
   });
@@ -41,15 +41,15 @@ export class UploadPreparationWorkerClient {
     const value = await this.#request("prepare", { file, sourceInspection });
     const outputBlob = value.output.passthrough
       ? (file.type === "image/avif" ? file : file.slice(0, file.size, "image/avif"))
-      : new Blob([value.output.buffer], { type: "image/avif" });
-    const previewBlob = new Blob([value.preview.buffer], { type: "image/avif" });
+      : new Blob([value.output.buffer], { type: value.output.mimeType });
+    const previewBlob = new Blob([value.preview.buffer], { type: value.preview.mimeType });
 
     return Object.freeze({
       prepared: Object.freeze({
         source: Object.freeze({ ...value.source }),
         output: Object.freeze({
           blob: outputBlob,
-          mimeType: "image/avif",
+          mimeType: value.output.mimeType,
           size: value.output.size,
           sha256: value.output.sha256,
           width: value.output.width,
@@ -59,7 +59,7 @@ export class UploadPreparationWorkerClient {
       }),
       inventoryPreview: Object.freeze({
         blob: previewBlob,
-        mimeType: "image/avif",
+        mimeType: value.preview.mimeType,
         size: value.preview.size,
         width: value.preview.width,
         height: value.preview.height

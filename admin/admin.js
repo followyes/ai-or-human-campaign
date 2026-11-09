@@ -15,7 +15,7 @@ import {
   getAdminStorageUsage,
   listGameImages,
   registerPreparedImage
-} from "../js/admin-content.js?v=0.8.0";
+} from "../js/admin-content.js?v=0.8.1";
 import {
   AvifConversionError,
   formatBytes
@@ -26,10 +26,10 @@ import {
   summarizeUploadBatch
 } from "../js/upload-batch.js";
 import { DeleteDrainCoordinator } from "../js/delete-queue.js";
-import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js?v=0.8.0";
-import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js";
+import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js?v=0.8.1";
+import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js?v=0.8.1";
 import { AdminResultsPanel } from "../js/admin-results-ui.js";
-import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js?v=0.8.0";
+import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js?v=0.8.1";
 import { fetchAdminQueueStatus } from "../js/campaign-admin-status.js";
 import { fetchAdminChallengeStatus } from "../js/campaign-challenge-admin-status.js";
 
@@ -52,7 +52,9 @@ const loginTitle = document.querySelector("#login-title");
 const adminTitle = document.querySelector("#admin-title");
 
 const classInputs = [...document.querySelectorAll('input[name="content-class"]')];
-const trackInputs = [...document.querySelectorAll('input[name="upload-track"]')];
+const uploadAssignment = document.querySelector('#upload-assignment');
+const selectedCategoryHint = document.querySelector('#selected-category-hint');
+const challengeEnabled = document.querySelector('#challenge-enabled');
 const challengeTopicField = document.querySelector('#challenge-topic-field');
 const challengeTopicInput = document.querySelector('#challenge-topic');
 const challengeProgress = document.querySelector('#challenge-upload-progress');
@@ -60,12 +62,16 @@ const challengeTitle = document.querySelector('#challenge-upload-title');
 const challengeCounts = document.querySelector('#challenge-upload-counts');
 const challengeFill = document.querySelector('#challenge-upload-fill');
 let challengeQueueRows = [];
-function selectedUploadTrack() { return trackInputs.find(x=>x.checked)?.value || 'main'; }
+function selectedUploadTrack() { return challengeEnabled.checked ? 'challenge' : 'main'; }
 function selectedChallengeTopic() { return challengeTopicInput.value.trim().replace(/\s+/g,' '); }
 function renderChallengePicker() {
-  const challenge=selectedUploadTrack()==='challenge';
-  challengeTopicField.classList.toggle('is-hidden',!challenge);
-  challengeProgress.classList.toggle('is-hidden',!challenge);
+  const selected = selectedContentClass();
+  uploadAssignment.classList.toggle('is-hidden', !selected);
+  if (selected) selectedCategoryHint.textContent = `Wybrana kategoria: ${selected.toUpperCase()}`;
+  const challenge = selected && selectedUploadTrack() === 'challenge';
+  challengeTopicField.classList.toggle('is-hidden', !challenge);
+  challengeProgress.classList.toggle('is-hidden', !challenge);
+  challengeEnabled.setAttribute('aria-expanded', String(Boolean(challenge)));
   if (!challenge) return;
   const topic=selectedChallengeTopic();
   const found=challengeQueueRows.find(x=>x.key===topic.toLocaleLowerCase('pl-PL'));
@@ -80,7 +86,7 @@ async function refreshChallengeProgress() {
   catch(error) { console.warn('Challenge status:',error.message); challengeQueueRows=[]; }
   renderChallengePicker();
 }
-for (const input of trackInputs) input.addEventListener('change',()=>{ renderChallengePicker(); syncBusyControls(); });
+challengeEnabled.addEventListener('change',()=>{ renderChallengePicker(); syncBusyControls(); });
 challengeTopicInput.addEventListener('input',()=>{ renderChallengePicker(); syncBusyControls(); });
 
 const dropZone = document.querySelector("#drop-zone");
@@ -283,7 +289,7 @@ function syncBusyControls() {
   dropZone.setAttribute("aria-disabled", contentInteractionBusy || !categorySelected ? "true" : "false");
   fileInput.disabled = contentInteractionBusy || !categorySelected;
   for (const input of classInputs) input.disabled = contentInteractionBusy;
-  for (const input of trackInputs) input.disabled = contentInteractionBusy;
+  challengeEnabled.disabled = contentInteractionBusy;
   challengeTopicInput.disabled = contentInteractionBusy;
 
   logoutButton.disabled = authBusy || contentInteractionBusy || resultsPanel.busy;
@@ -1260,10 +1266,10 @@ async function prepareFile(file, contentClass, queueItem) {
 
   const passthrough = sourceInspection.mimeType === "image/avif";
   queueItem.set(
-    passthrough ? "AVIF 1:1" : "AVIF",
+    passthrough ? "AVIF 1:1" : "WEBP",
     passthrough
-      ? `${formatBytes(file.size)} · walidacja bez rekompresji`
-      : `${formatBytes(file.size)} · dekodowanie + konwersja`
+      ? `${formatBytes(file.size)} · walidacja AVIF bez rekompresji`
+      : `${formatBytes(file.size)} · konwersja lokalna (bez zewnętrznego kodera)`
   );
 
   return uploadPreparationWorker.prepare(file, sourceInspection);
@@ -1446,7 +1452,7 @@ logoutButton.addEventListener("click", async () => {
 });
 
 for (const input of classInputs) {
-  input.addEventListener("change", syncBusyControls);
+  input.addEventListener("change", () => { renderChallengePicker(); syncBusyControls(); });
 }
 
 dropZone.addEventListener("click", () => {

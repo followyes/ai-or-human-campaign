@@ -2,7 +2,6 @@ import {
   AvifConversionError,
   MAX_SOURCE_PIXELS,
   calculateInventoryPreviewGeometry,
-  encodeImageDataToAvif,
   sha256Blob,
   validateSourceFile
 } from "./avif-converter.js";
@@ -117,81 +116,51 @@ function releaseCanvas(canvas) {
   }
 }
 
-async function verifyAvifBlob(blob, expectedWidth, expectedHeight) {
-  if (!(blob instanceof Blob) || blob.type !== "image/avif" || blob.size <= 0) {
-    throw new AvifConversionError(
-      "AVIF_OUTPUT_INVALID",
-      "Wynik konwersji nie jest prawidłowym plikiem AVIF."
-    );
+async function encodeWebpCanvas(canvas, width, height, quality = 0.85) {
+  if (typeof canvas.convertToBlob !== 'function') {
+    throw new AvifConversionError('WEBP_ENCODER_UNAVAILABLE',
+      'Ta przeglądarka nie obsługuje lokalnej konwersji do WebP.');
   }
-
-  let decoded = null;
+  let blob;
   try {
-    decoded = await decodeSourceBlob(blob);
-    if (decoded.width !== expectedWidth || decoded.height !== expectedHeight) {
-      throw new AvifConversionError(
-        "AVIF_DIMENSIONS_CHANGED",
-        "Weryfikacja AVIF wykryła nieoczekiwaną zmianę wymiarów."
-      );
-    }
-  } finally {
-    decoded?.close?.();
+    blob = await canvas.convertToBlob({type:'image/webp', quality});
+  } catch (error) {
+    throw new AvifConversionError('WEBP_ENCODE_FAILED',
+      'Nie udało się przekonwertować zdjęcia do WebP.',{cause:error});
   }
+  if (!(blob instanceof Blob) || blob.type !== 'image/webp' || blob.size === 0) {
+    throw new AvifConversionError('WEBP_ENCODER_UNAVAILABLE',
+      'Przeglądarka nie obsługuje tworzenia WebP.');
+  }
+  const decoded = await decodeSourceBlob(blob);
+  try {
+    if (decoded.width !== width || decoded.height !== height) {
+      throw new AvifConversionError('WEBP_DIMENSIONS_CHANGED',
+        'Konwersja WebP zmieniła wymiary zdjęcia.');
+    }
+  } finally { decoded.close?.(); }
+  return blob;
 }
 
 async function encodePreviewFromDecoded(decoded, width, height) {
   const geometry = calculateInventoryPreviewGeometry(width, height);
   const { canvas, context } = createWorkerCanvas(geometry.outputWidth, geometry.outputHeight);
-
-  let imageData = null;
   try {
-    context.drawImage(
-      decoded,
-      geometry.sourceX,
-      geometry.sourceY,
-      geometry.cropWidth,
-      geometry.cropHeight,
-      0,
-      0,
-      geometry.outputWidth,
-      geometry.outputHeight
-    );
-
-    imageData = context.getImageData(0, 0, geometry.outputWidth, geometry.outputHeight);
-    releaseCanvas(canvas);
-
-    const blob = await encodeImageDataToAvif(imageData);
-    imageData = null;
-    await verifyAvifBlob(blob, geometry.outputWidth, geometry.outputHeight);
-
-    return {
-      blob,
-      width: geometry.outputWidth,
-      height: geometry.outputHeight
-    };
-  } finally {
-    imageData = null;
-    releaseCanvas(canvas);
-  }
+    context.drawImage(decoded, geometry.sourceX, geometry.sourceY,
+      geometry.cropWidth, geometry.cropHeight, 0, 0, geometry.outputWidth, geometry.outputHeight);
+    const blob = await encodeWebpCanvas(canvas, geometry.outputWidth, geometry.outputHeight, 0.80);
+    return {blob,width:geometry.outputWidth,height:geometry.outputHeight,mimeType:'image/webp'};
+  } finally { releaseCanvas(canvas); }
 }
 
-function captureProductionPixels(decoded, width, height) {
-  const { canvas, context } = createWorkerCanvas(width, height);
+async function encodeProductionFromDecoded(decoded, width, height) {
+  const {canvas, context}=createWorkerCanvas(width,height);
   try {
-    context.drawImage(decoded, 0, 0, width, height);
-    return context.getImageData(0, 0, width, height);
-  } finally {
-    // Once ImageData owns the snapshot, the full-resolution canvas backing
-    // store is no longer needed and can be released before AVIF encoding.
-    releaseCanvas(canvas);
-  }
-}
-
-async function encodeProductionPixels(imageData, width, height) {
-  const blob = await encodeImageDataToAvif(imageData);
-  await verifyAvifBlob(blob, width, height);
-  const sha256 = await sha256Blob(blob);
-  return { blob, sha256 };
+    context.drawImage(decoded,0,0,width,height);
+    const blob=await encodeWebpCanvas(canvas,width,height,0.87);
+    const sha256=await sha256Blob(blob);
+    return {blob,sha256};
+  } finally { releaseCanvas(canvas); }
 }
 
 async function inspectFile(file) {
@@ -216,8 +185,7 @@ async function prepareFile(file, sourceInspection) {
     const height = Number(decoded.height);
     validateDimensions(width, height);
 
-    // Derive the Admin preview from the original decode. This avoids the old
-    // production-AVIF re-decode solely for thumbnail creation.
+    // Derive the WebP thumbnail from the source bitmap; do not rely on remote encoders.
     const preview = await encodePreviewFromDecoded(decoded, width, height);
 
     if (sourceInspection.mimeType === "image/avif") {
@@ -239,7 +207,7 @@ async function prepareFile(file, sourceInspection) {
           },
           preview: {
             buffer: previewBuffer,
-            mimeType: "image/avif",
+            mimeType: "image/webp",
             size: preview.blob.size,
             width: preview.width,
             height: preview.height
@@ -249,19 +217,12 @@ async function prepareFile(file, sourceInspection) {
       };
     }
 
-    // Snapshot production pixels, then release the source bitmap BEFORE the
-    // expensive full-resolution AVIF encode starts. At this point the Worker
-    // owns only the RGBA snapshot plus the small preview/codec state.
-    let productionPixels = captureProductionPixels(decoded, width, height);
+    // Native WebP conversion never loads third-party JavaScript or WASM.
+    const production = await encodeProductionFromDecoded(decoded, width, height);
     decoded.close?.();
     decoded = null;
-
-    const production = await encodeProductionPixels(productionPixels, width, height);
-    productionPixels = null;
-
     const [outputBuffer, previewBuffer] = await Promise.all([
-      production.blob.arrayBuffer(),
-      preview.blob.arrayBuffer()
+      production.blob.arrayBuffer(), preview.blob.arrayBuffer()
     ]);
 
     return {
@@ -269,7 +230,7 @@ async function prepareFile(file, sourceInspection) {
         source: sourceInspection,
         output: {
           buffer: outputBuffer,
-          mimeType: "image/avif",
+          mimeType: "image/webp",
           size: production.blob.size,
           sha256: production.sha256,
           width,
@@ -278,7 +239,7 @@ async function prepareFile(file, sourceInspection) {
         },
         preview: {
           buffer: previewBuffer,
-          mimeType: "image/avif",
+          mimeType: "image/webp",
           size: preview.blob.size,
           width: preview.width,
           height: preview.height

@@ -3,7 +3,7 @@ import {
   copyStorageObject,
   removeStorageObject,
   updateGameImageMoveMetadata
-} from "./admin-content.js?v=0.8.0";
+} from "./admin-content.js";
 
 const VALID_CLASSES = new Set(["ai", "human"]);
 
@@ -30,7 +30,7 @@ export function deriveMovePaths(image, targetClass) {
   requireTargetClass(targetClass);
 
   const sourceClass = image.content_class;
-  const match = image.storage_path.match(/^(ai|human)\/([^/]+\.avif)$/i);
+  const match = image.storage_path.match(/^(ai|human)\/([^/]+\.(?:avif|webp))$/i);
   if (!match || match[1].toLowerCase() !== sourceClass) {
     throw new AdminContentError(
       "MOVE_SOURCE_PATH_CLASS_MISMATCH",
@@ -44,8 +44,10 @@ export function deriveMovePaths(image, targetClass) {
     : null;
 
   if (sourceThumbnailPath) {
-    const expected = `${sourceClass}/_previews/v1/${basename}`;
-    if (sourceThumbnailPath !== expected) {
+    const previewMatch = sourceThumbnailPath.match(/^(ai|human)\/_previews\/v1\/([^/]+\.(?:avif|webp))$/i);
+    const sourceStem = basename.replace(/\.(avif|webp)$/i,'');
+    const previewStem = previewMatch?.[2]?.replace(/\.(avif|webp)$/i,'');
+    if (!previewMatch || previewMatch[1].toLowerCase() !== sourceClass || previewStem !== sourceStem) {
       throw new AdminContentError(
         "MOVE_PREVIEW_PATH_CLASS_MISMATCH",
         "Ścieżka miniatury nie zgadza się z kategorią obrazu."
@@ -60,7 +62,7 @@ export function deriveMovePaths(image, targetClass) {
     targetStoragePath: `${targetClass}/${basename}`,
     sourceThumbnailPath,
     targetThumbnailPath: sourceThumbnailPath
-      ? `${targetClass}/_previews/v1/${basename}`
+      ? sourceThumbnailPath.replace(/^ai\/|^human\//i,`${targetClass}/`)
       : null,
     noop: sourceClass === targetClass
   });
