@@ -1171,3 +1171,16 @@ h2 {
 .challenge-topic-field { margin: 12px 0 0; }
 .challenge-topic-field input:focus { outline: 2px solid #a88bde; outline-offset: 2px; }
 .upload-assignment.is-hidden, .challenge-topic-field.is-hidden, .challenge-upload-progress.is-hidden { display: none !important; }
+
+/* Campaign v0.9.1 — ranked results in the existing admin Wyniki workspace */
+.campaign-rank-results{background:#f7fbfb;border:1px solid #dce7e6;border-radius:16px;padding:17px;margin:8px 0 18px}
+.campaign-rank-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.campaign-rank-head h2{font-size:18px;margin:0 0 4px}.campaign-rank-head p{font-size:12px;color:#556973;margin:0}
+#campaign-ranks-status{font-size:12px;color:#52646b;margin:10px 0}
+.campaign-ranks-table-wrap{max-height:350px;overflow:auto;border:1px solid #dce5e5;border-radius:10px;background:#fff}
+.campaign-ranks-table{border-collapse:collapse;width:100%;font-size:12px;min-width:580px}
+.campaign-ranks-table th,.campaign-ranks-table td{padding:11px 10px;text-align:left;border-bottom:1px solid #e8eeee}
+.campaign-ranks-table th{background:#edf4f4;position:sticky;top:0;z-index:1;color:#3b4b55}
+.campaign-ranks-table td:nth-child(3){font-weight:800;color:#174f65}
+.legacy-results{margin-top:16px;border-top:1px solid #dbe3e6;padding-top:10px}.legacy-results>summary{font-weight:750;cursor:pointer;padding:9px;color:#4b5d65}
+@media(max-width:560px){.campaign-rank-results{padding:10px}.campaign-rank-head h2{font-size:15px}.campaign-rank-head p{font-size:10px}}

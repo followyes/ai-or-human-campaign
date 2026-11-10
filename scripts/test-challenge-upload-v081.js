@@ -22,7 +22,7 @@ const html=readFileSync(new URL('../admin/index.html',import.meta.url),'utf8');
 const js=readFileSync(new URL('../admin/admin.js',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../js/upload-preparation-worker.js',import.meta.url),'utf8');
 assert.ok(html.includes('id="challenge-enabled"') && html.includes('id="upload-assignment"'));
-assert.ok(html.includes('admin.js?v=0.8.1') && html.includes('admin.css?v=0.8.1'));
+assert.ok(html.includes('admin.js?v=0.9.1') && html.includes('admin.css?v=0.9.1'));
 assert.ok(js.includes('challengeEnabled.addEventListener') && js.includes("uploadAssignment.classList.toggle('is-hidden', !selected)"));
 assert.ok(worker.includes("type:'image/webp'") && worker.includes('canvas.convertToBlob'));
 assert.ok(!worker.includes('encodeImageDataToAvif'));

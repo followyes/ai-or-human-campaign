@@ -4,8 +4,8 @@ Nowa, niezależna wersja przeglądarkowej gry AI vs Human. Bazuje na kodzie wcze
 
 ## Status
 
-**Campaign v0.7.5 — czytelne oznaczanie ukończonych etapów i korekta animacji.**
-Po ukończeniu poziomu gracz automatycznie wraca do mapy. Mapa ma jedną pionową ścieżkę z rombowymi oznaczeniami etapów; ukończone etapy mają znacznik ✓ i informacje o możliwości powtórzenia na tabliczce; na telefonie przewija się palcem, a na PC kółkiem albo przeciągając myszką. Odblokowanie kolejnego etapu jest animowane. AI oznaczamy kolorem niebieskim, Human magenta, a zielony/czerwony informują wyłącznie o poprawnej/błędnej odpowiedzi.
+**Campaign v0.9.1 — dynamiczna kampania, konta graczy i ranking beta.**
+Po ukończeniu poziomu gracz automatycznie wraca do mapy. Mapa ma jedną pionową ścieżkę z rombowymi oznaczeniami etapów; ukończone etapy mają znacznik ✓ i informacje o możliwości powtórzenia na tabliczce; na telefonie przewija się palcem, a na PC kółkiem albo przeciągając myszką. Pierwsze ukończenie etapu odblokowuje następny romb: mapa przewija się do niego, kłódka drży i zmienia się w numer. Ponowne zaliczenie etapu podświetla istniejący znacznik, bez fałszywego odblokowywania. W trybie ograniczonego ruchu efekt jest spokojniejszy. AI oznaczamy kolorem niebieskim, Human magenta, a zielony/czerwony informują wyłącznie o poprawnej/błędnej odpowiedzi.
 Menu główne (`index.html`) zawiera tylko przycisk **Kampania**, który otwiera `campaign.html`.
 Panel administracyjny działa pod `/admin/` z Supabase Auth.
 Pięć zwykłych poziomów (po 5 zdjęć) i boss (10 zdjęć) tworzą powtarzalny cykl.
@@ -39,7 +39,7 @@ Aby zobaczyć interfejs, uruchom lokalny serwer HTTP w folderze repozytorium (np
 - Odpowiedzi i ścieżki aktywnych kart są publicznie odczytywane z widoku `campaign_public_cards`; queue i biblioteka panelu są chronione RLS.
 - W panelu można usunąć lub przenieść używane zdjęcie po potwierdzeniu konsekwencji: cały etap zostaje usunięty, a pozostałe zdjęcia wracają do kolejki.
 - Uwaga: usuwanie plików Storage i zmiany w PostgreSQL nie są pojedynczą transakcją; przed pracą na prawdziwych zdjęciach przetestuj ten scenariusz na plikach testowych.
-- Progres graczy pozostaje lokalny (`localStorage`) i nie synchronizuje się między urządzeniami.
+- Gość zapisuje postęp lokalnie; zalogowany gracz korzysta z Supabase Auth i synchronizowanego postępu/serc.
 
 ## Wdrożenie
 
@@ -66,5 +66,10 @@ Panel jest dostępny pod `/admin/` w obrębie nowej domeny GitHub Pages.
 Korzysta wyłącznie z nowego projektu Supabase skonfigurowanego w `js/supabase-config.js`.
 Przed pierwszym logowaniem administrator musi uruchomić instrukcję SQL dostarczoną
 oddzielnie (poza repozytorium) i przypisać rolę do konta Supabase Auth.
-Uwaga: zapis wyników kampanii działa obecnie lokalnie w przeglądarce; zakładka
-„Wyniki” panelu nie odzwierciedla jeszcze postępów tej kampanii.
+W zakładce „Wyniki” panelu widoczne są punktowane, zweryfikowane przez serwer ukończone próby kampanii i Challenge (ranking beta). Starsze tryby Classic/Speed Run mają osobne archiwum.
+Dla gości postęp nadal pozostaje lokalny. Wyniki sprzed v0.9.1 nie są automatycznie uwzględniane w rankingu.
+Ważne: publiczne metadane i ścieżki Storage ujawniają klasy zdjęć — pełny anty-cheat wymaga ich ukrycia w przyszłości.
+
+## Ranking beta (bieżąca architektura)
+
+Nowy skrypt `SUPABASE_SQL/12_rankingi_v091.sql` instaluje prywatne tabelki sesji/kart oraz serwerowe RPC do naliczania punktów za każdą poprawną odpowiedź. Dla każdego trwałego identyfikatora poziomu wyświetlane jest najlepsze *potwierdzone* ukończenie danego gracza. Niedokończone i stare niezweryfikowane próby nie uczestniczą w rankingach. W głównym interfejsie przycisk „Aktualny” umożliwia powrót do pierwszego nieukończonego poziomu mapy.

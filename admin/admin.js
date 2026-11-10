@@ -1,3 +1,5 @@
+import { resolveSupabasePublicConfig } from "../js/content-source.js";
+import { SUPABASE_PUBLIC_CONFIG } from "../js/supabase-config.js";
 import {
   AdminAuthError,
   authorizeAdminSession,
@@ -167,6 +169,47 @@ const resultsPanel = new AdminResultsPanel({
     showLogin("Sesja administratora wygasła lub brak uprawnień.");
   }
 });
+// ADMIN ONLY: request protected RPC; nicknames are rendered with textContent.
+const rankedBody = document.querySelector('#campaign-ranks-body');
+const rankedStatus = document.querySelector('#campaign-ranks-status');
+let rankedRequest = 0;
+async function loadCampaignRanks() {
+  const seq=++rankedRequest;
+  rankedStatus.textContent='Pobieranie wyników kampanii…';
+  rankedBody.replaceChildren();
+  try {
+    const session=await refreshCurrentSessionForMutation();
+    const {projectUrl,publishableKey}=resolveSupabasePublicConfig(SUPABASE_PUBLIC_CONFIG);
+    const response=await globalThis.fetch(`${projectUrl}/rest/v1/rpc/campaign_admin_rank_results`,{
+      method:'POST',cache:'no-store',headers:{
+        apikey:publishableKey,Authorization:`Bearer ${session.access_token}`,
+        'Content-Type':'application/json'
+      },body:JSON.stringify({p_limit:100})
+    });
+    const data=await response.json().catch(()=>null);
+    if (!response.ok) throw new Error(data?.message || `HTTP ${response.status}`);
+    if (seq!==rankedRequest) return;
+    rankedBody.replaceChildren();
+    const rows=Array.isArray(data?.results)?data.results:[];
+    for (const record of rows) {
+      const tr=document.createElement('tr');
+      const stage=record.kind==='challenge' ? `Challenge · ${record.topic || 'usunięty'}` :
+        `Poziom ${record.stage_number || 'usunięty'}`;
+      const values=[record.nickname || 'Gracz',stage,`${record.points} pkt`,
+        `${(Number(record.elapsed_ms || 0)/1000).toFixed(1)} s`,
+        String(record.attempt || '—'),
+        record.finished_at ? new Date(record.finished_at).toLocaleString('pl-PL') : '—'];
+      for (const value of values) {const td=document.createElement('td');td.textContent=value;tr.append(td);}
+      rankedBody.append(tr);
+    }
+    rankedStatus.textContent=rows.length
+      ? `Ostatnie ${rows.length} ukończonych, punktowanych podejść. Wyniki starszych wersji nie są uwzględniane.`
+      : 'Brak nowych wyników. Pojawią się po ukończeniu poziomu przez zalogowanego gracza.';
+  } catch(error) {
+    if (seq===rankedRequest) rankedStatus.textContent=`Nie udało się pobrać wyników: ${error.message}`;
+  }
+}
+document.querySelector('#campaign-ranks-refresh').addEventListener('click',()=>void loadCampaignRanks());
 let activeAdminTab = "library";
 function switchAdminTab(tab) {
   if (!currentSession || (tab !== "library" && tab !== "results")) return;
@@ -183,8 +226,12 @@ function switchAdminTab(tab) {
   resultsWorkspace.hidden = !resultsActive;
   resultsWorkspace.inert = !resultsActive;
   resultsPanel.setActive(resultsActive);
+  if (resultsActive) void loadCampaignRanks();
 }
 function resetAdminTab() {
+  ++rankedRequest;
+  rankedBody.replaceChildren();
+  rankedStatus.textContent = 'Wybierz zakładkę Wyniki.';
   activeAdminTab = "library";
   tabLibrary.setAttribute("aria-selected", "true");
   tabResults.setAttribute("aria-selected", "false");

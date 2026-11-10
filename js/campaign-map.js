@@ -7,7 +7,7 @@ import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js?v
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
-import { CampaignAccount } from "./campaign-account.js?v=0.9.0.2";
+import { CampaignAccount } from "./campaign-account.js?v=0.9.1";
 import { currentMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -100,13 +100,17 @@ function showCompletionCelebration(stage, score) {
   }, CELEBRATION_SHOW_MS);
 }
 
-function showScoreToast(score, onlineSaved = false) {
+function showScoreToast(score, onlineSaved = false, leaderboard = null) {
   const toast = $('#score-toast');
   if (toastTimeout) clearTimeout(toastTimeout);
   toast.replaceChildren();
   const title = document.createElement('strong'); title.textContent = `${pointsLabel(score.points)} · ${secondsLabel(score.answerMs)}`;
   const subtitle = document.createElement('small');
-  subtitle.textContent = `Podejście ${score.attemptNumber} · ${onlineSaved ? 'Zapisano na Twoim koncie (wynik testowy)' : 'Wynik lokalny'} · Ranking wkrótce`;
+  const mine = leaderboard?.mine;
+  const total = Number(leaderboard?.total || 0);
+  subtitle.textContent = mine && total > 0
+    ? `Podejście ${score.attemptNumber} · Miejsce ${mine.place}/${total}${total > 1 ? ` · Lepszy wynik niż ${mine.better_than}% graczy` : ''}`
+    : `Podejście ${score.attemptNumber} · ${onlineSaved ? 'Wynik zapisany · Ranking czeka na innych graczy' : 'Wynik lokalny · Zaloguj się, by wejść do rankingu'}`;
   toast.append(title,subtitle);
   toast.hidden = false;
   requestAnimationFrame(()=>toast.classList.add('is-visible'));
@@ -244,8 +248,9 @@ function setScreen(name) {
 function renderMap() {
   progress = keepLiveFields(regenerate(progress), progress);
   redrawHearts();
+  requestAnimationFrame(refreshReturnToCurrent);
   $('#sync-status-note').textContent = useCloud()
-    ? 'Postęp i wyniki testowe są zapisywane na Twoim koncie.'
+    ? 'Postęp i punkty zapisane na koncie. Ranking beta: wyniki sprawdza serwer.'
     : 'Bez konta postęp i punkty zostają na tym urządzeniu.';
   $('#reset-demo').hidden = useCloud();
   const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
@@ -498,16 +503,14 @@ function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0
   unlockState = { completedUid, nextUid, phase: 'waiting' };
   const currentState = unlockState;
   const completedName = stage.isChallenge ? `Challenge „${stage.topic}” ukończony!` : stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
-  unlockBanner.textContent = newlyUnlocked
-    ? `${completedName} Zaraz odblokujemy ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
-    : `${completedName} ${wasCompleted ? 'Zaliczone ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
-  unlockBanner.hidden = delayBeforeUnlockMs > 0;
+  // No overlaid yellow toast: celebration + bottom ranking toast already show success.
+  unlockBanner.hidden = true;
   clearRunTimers();
   run = null;
   setScreen('map');
   const startUnlock = () => {
     if (screen !== 'map' || unlockState !== currentState) return;
-    unlockBanner.hidden = false;
+    unlockBanner.hidden = true;
     requestAnimationFrame(() => scrollMapToStage(nextUid || completedUid, 'smooth', nextUid ? completedUid : null));
     unlockRevealTimeout = window.setTimeout(() => {
     if (screen !== 'map' || unlockState !== currentState) return;
@@ -560,6 +563,27 @@ function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0
     if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
   }, UNLOCK_ANIMATION_MS + delayBeforeUnlockMs);
 }
+
+// Quickly recenter the long map on the currently playable main level.
+const returnToCurrentButton = $('#map-return-current');
+function currentPlayableStage() {
+  return activeStages.find(s => !(progress.completedStageIds || []).includes(s.uid)) || activeStages.at(-1) || null;
+}
+function refreshReturnToCurrent() {
+  const current = currentPlayableStage();
+  if (screen !== 'map' || !current) { returnToCurrentButton.hidden = true; return; }
+  const node = findStageNode(current.uid || String(current.id));
+  if (!node) { returnToCurrentButton.hidden = true; return; }
+  const viewport = mapScroller.getBoundingClientRect(), rect=node.getBoundingClientRect();
+  const delta = (rect.top + rect.height/2) - (viewport.top + viewport.height/2);
+  returnToCurrentButton.hidden = Math.abs(delta) < Math.max(120,viewport.height*0.48);
+  returnToCurrentButton.querySelector('span').textContent = delta > 0 ? '↓' : '↑';
+}
+returnToCurrentButton.addEventListener('click', () => {
+  const current=currentPlayableStage();
+  if (current) scrollMapToStage(current.uid || String(current.id));
+});
+mapScroller.addEventListener('scroll',refreshReturnToCurrent,{passive:true});
 
 // Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
 let mapDrag = null;
@@ -651,16 +675,21 @@ async function beginStage(stage) {
   }
   let attemptNumber;
   let remoteAttemptId = null;
+  let rankedOrder = null;
   if (useCloud()) {
     try {
       const entry = await account.begin(stage.uid,stage.isChallenge ? 'challenge' : 'main');
       attemptNumber = entry.attempt_number;
       remoteAttemptId = entry.attempt_id;
+      const ranked = await account.rankPrepare(remoteAttemptId);
+      if (!Array.isArray(ranked.positions) || ranked.positions.length !== stage.images.length ||
+          new Set(ranked.positions).size !== stage.images.length) throw new Error('Niekompletna kolejność kart z serwera.');
+      rankedOrder = ranked.positions.map(pos=>stage.images.find(img=>img.imagePosition+1===pos));
+      if (rankedOrder.some(img=>!img)) throw new Error('Nie udało się dopasować kart do poziomu.');
       cloudAttempts[stage.uid] = attemptNumber;
       applyRemoteHearts(entry);
     } catch (error) {
-      unlockBanner.textContent = `Nie można rozpocząć poziomu na koncie: ${error.message}`;
-      unlockBanner.hidden = false;
+      setContentNotice(`Nie można rozpocząć poziomu na koncie: ${error.message}`, false);
       return;
     }
   } else attemptNumber = nextLocalAttempt(stage);
@@ -668,9 +697,12 @@ async function beginStage(stage) {
   run = {
     score: createScoreRun(attemptNumber),
     remoteAttemptId,
+    rankedOnline: Boolean(remoteAttemptId && rankedOrder),
+    cardReady: !rankedOrder,
+    rankedFinished: false,
     cardShownAt: performance.now(),
     stage,
-    deck: shuffleImages(stage.images),
+    deck: rankedOrder || shuffleImages(stage.images),
     index: 0,
     deadline: null,
     pausedTimeLeft: null,
@@ -698,6 +730,23 @@ function showCard() {
     run.pausedTimeLeft = null;
   }
   const current = run.deck[run.index];
+  const referenceRun = run, referenceIndex=run.index;
+  run.cardReady = !run.rankedOnline;
+  answerButtons.forEach(btn=>btn.disabled=run.rankedOnline);
+  async function markCardReady() {
+    if (run!==referenceRun || run.index!==referenceIndex || !run.rankedOnline) return;
+    try {
+      await account.rankReady(run.remoteAttemptId,referenceIndex+1);
+      if (run!==referenceRun || run.index!==referenceIndex) return;
+      run.cardShownAt=performance.now();
+      run.cardReady=true;
+      answerButtons.forEach(btn=>btn.disabled=false);
+    } catch(error) {
+      if (run!==referenceRun || run.index!==referenceIndex) return;
+      feedback.textContent=`Błąd przygotowania karty: ${error.message}`;
+      // Keep buttons disabled: server has not started this card's timer.
+    }
+  }
   run.cardShownAt = performance.now();
   refreshScoreHud();
   $("#play-counter").textContent = `${run.index + 1} / ${run.deck.length}`;
@@ -708,17 +757,17 @@ function showCard() {
   // Boss timer starts only once the first locally bundled image is ready.
   if (run.stage.isBoss && !run.started) {
     image.onload = () => {
-      if (run) run.cardShownAt = performance.now();
+      if (run===referenceRun) { run.cardShownAt = performance.now(); void markCardReady(); }
       if (!run || run.started || !run.stage.isBoss) return;
       run.started = true;
       run.deadline = Date.now() + BOSS_LIMIT_MS;
     };
-  } else image.onload = () => { if (run) run.cardShownAt = performance.now(); };
+  } else image.onload = () => { if (run===referenceRun) { run.cardShownAt=performance.now(); void markCardReady(); } };
   image.onerror = () => {
     if (run && screen === "play") loseRun("Nie udało się wczytać karty testowej. Sprawdź kompletność plików w assets/campaign/demo.", false);
   };
   image.src = current.src;
-  if (run.stage.isBoss && !run.started && image.complete && image.naturalWidth > 0) image.onload?.();
+  if (image.complete && image.naturalWidth > 0) image.onload?.();
   redrawHearts();
 }
 
@@ -744,7 +793,9 @@ async function winRun() {
   const finishedRun = run;
   const stage = run.stage;
   let onlineSaved = false;
-  if (useCloud() && finishedRun.remoteAttemptId) {
+  if (finishedRun.rankedOnline && finishedRun.rankedFinished) {
+    onlineSaved = true;
+  } else if (useCloud() && finishedRun.remoteAttemptId) {
     try {
       const result = await account.finish(finishedRun.remoteAttemptId,true,
         finishedRun.score.points,finishedRun.score.answerMs);
@@ -765,11 +816,26 @@ async function winRun() {
   showUnlockOnMap(stage, nextStage, wasCompleted, CELEBRATION_DURATION_MS);
   showCompletionCelebration(stage, finishedRun.score);
   showScoreToast(finishedRun.score,onlineSaved);
+  if (onlineSaved && finishedRun.rankedOnline) {
+    const toastRef=$('#score-toast');
+    void account.leaderboard(stage.uid,stage.isChallenge?'challenge':'main').then(ranking=>{
+      if (toastRef.hidden) return;
+      showScoreToast(finishedRun.score,true,ranking);
+    }).catch(error=>console.warn('Ranking:',error.message));
+  }
 }
 async function loseRun(message, deductHeart) {
   if (!run || run.finishing) return;
   run.finishing = true;
-  if (deductHeart && useCloud() && run.remoteAttemptId) {
+  if (run.rankedOnline && run.remoteAttemptId) {
+    try {
+      const result = run.rankedFinished ? null : await account.rankForfeit(run.remoteAttemptId,deductHeart);
+      if (result) applyRemoteHearts(result);
+    } catch(error) {
+      showCloudSaveError(error,'Nieudane podejście');
+      return;
+    }
+  } else if (deductHeart && useCloud() && run.remoteAttemptId) {
     try {
       const result = await account.finish(run.remoteAttemptId,false,
         run.score.points,run.score.answerMs);
@@ -788,8 +854,8 @@ async function loseRun(message, deductHeart) {
     "♡", noHearts ? null : failedStage, "Spróbuj ponownie");
 }
 
-function answer(type) {
-  if (screen !== "play" || !run || pendingAnswer) return;
+async function answer(type) {
+  if (screen !== "play" || !run || pendingAnswer || (run.rankedOnline && !run.cardReady)) return;
   if (run.stage.isBoss && run.deadline && Date.now() >= run.deadline) {
     loseRun("Czas minął.", true);
     return;
@@ -804,9 +870,31 @@ function answer(type) {
   // Stop the boss clock during feedback; the animation must not cost playing time.
   if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
   const responseMs = Math.max(0,Math.round(performance.now() - (run.cardShownAt || performance.now())));
-  const correct = run.deck[run.index].type === type;
-  if (correct) run.score = addCorrectScore(run.score,responseMs);
-  else run.score.answerMs += responseMs;
+  let correct;
+  if (run.rankedOnline) {
+    const referenceRun=run;
+    try {
+      const verified=await account.rankAnswer(run.remoteAttemptId,run.index+1,type);
+      if (run!==referenceRun || screen!=='play') return;
+      correct=verified.correct===true;
+      run.score={...run.score,points:Number(verified.points),answerMs:Number(verified.answer_ms),
+        correctAnswers:run.score.correctAnswers+(correct?1:0),lastAward:Number(verified.award)};
+      run.rankedFinished=Boolean(verified.finished || verified.lost);
+      applyRemoteHearts(verified);
+    } catch(error) {
+      if (run!==referenceRun || screen!=='play') return;
+      pendingAnswer=false;
+      card.classList.remove('is-committed');
+      clearSwipeVisual();
+      feedback.textContent=`Błąd połączenia: ${error.message}. Spróbuj ponownie.`;
+      answerButtons.forEach(button=>button.disabled=false);
+      return;
+    }
+  } else {
+    correct = run.deck[run.index].type === type;
+    if (correct) run.score = addCorrectScore(run.score,responseMs);
+    else run.score.answerMs += responseMs;
+  }
   refreshScoreHud();
   const area = $(".swipe-area");
   area.classList.remove("is-feedback-success", "is-feedback-error");
@@ -860,7 +948,7 @@ document.addEventListener("keydown", (event) => {
 
 let dragStart = null;
 card.addEventListener("pointerdown", (event) => {
-  if (screen !== "play" || pendingAnswer || event.button !== 0) return;
+  if (screen !== "play" || pendingAnswer || (run?.rankedOnline && !run.cardReady) || event.button !== 0) return;
   dragStart = { x: event.clientX, y: event.clientY, id: event.pointerId };
   card.classList.add("is-dragging");
   try { card.setPointerCapture(event.pointerId); } catch {}
@@ -915,7 +1003,7 @@ async function initializeCampaignSource() {
         }
         initialMapCentered = false;
       }
-      setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach${activeChallenges.length ? ` + ${activeChallenges.length} Challenge` : ''}. Postęp zapisany lokalnie.`, false);
+      setContentNotice(`Zdjęcia z Supabase: ${loaded.count} kart w ${activeStages.length} etapach${activeChallenges.length ? ` + ${activeChallenges.length} Challenge` : ''}. Postęp dostępny ${useCloud()?'na koncie':'lokalnie'}.`, false);
     } else {
       setContentNotice(`W Supabase nie ma jeszcze gotowych poziomów (${loaded.count} kart). Działa DEMO.`);
     }
@@ -987,7 +1075,7 @@ function renderAuthButton() {
   $('#account-mode-toggle').hidden=signed;
   $('#account-signout').hidden=!signed;
   if (signed) {
-    $('#account-explainer').textContent=`Zalogowano jako ${nickname || account.user.email}. Osobiste wyniki są na razie niezweryfikowane — ranking uruchomimy po zabezpieczeniu odpowiedzi.`;
+    $('#account-explainer').textContent=`Zalogowano jako ${nickname || account.user.email}. Nowe wyniki w rankingu beta są oceniane przez serwer; wcześniejsze próby nie trafiają do rankingu.`;
   } else $('#account-explainer').textContent='Zaloguj się lub utwórz konto. Bez logowania nadal możesz grać z lokalnym postępem.';
 }
 $('#account-open').addEventListener('click',()=>{renderAuthButton();accountDialog.showModal();});

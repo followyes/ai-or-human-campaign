@@ -681,3 +681,12 @@ body {
 .score-toast{z-index:220;bottom:max(14px,env(safe-area-inset-bottom));}
 @media(max-width:520px){.test-account-reset{padding:7px;font-size:9px;max-width:100px;white-space:normal;line-height:1.2}.celebration-card{padding:25px 14px}.celebration-emblem{width:61px;height:61px;font-size:34px}.score-toast{bottom:max(12px,env(safe-area-inset-bottom));padding:10px 13px}.score-toast strong{font-size:19px}.score-toast small{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.level-celebration,.celebration-card{transition:none!important}.confetti-particle{animation:none!important;display:none!important}}
+
+/* v0.9.1 — no redundant yellow unlock banner. Return-to-current map action. */
+.map-unlock-banner{display:none!important}
+.map-return-current{position:absolute;right:16px;bottom:52px;z-index:8;display:flex;flex-direction:column;gap:1px;align-items:center;justify-content:center;min-width:58px;min-height:58px;padding:8px 10px;border-radius:16px;border:1px solid rgba(150,235,223,.6);background:#1b4854;color:#e7fff7;box-shadow:0 9px 24px #0008;cursor:pointer;font-weight:900}
+.map-return-current span{font-size:25px;line-height:1}
+.map-return-current small{font-size:9px;letter-spacing:.02em}
+.map-return-current:hover{background:#246375}
+.map-return-current:focus-visible{outline:3px solid #b0ffda;outline-offset:3px}
+.map-return-current[hidden]{display:none!important}

@@ -112,6 +112,31 @@ export class CampaignAccount {
       method:'POST',authenticated:true,body:{p_stage_id:stageUid,p_kind:kind}
     });
   }
+  async rankPrepare(attemptId) {
+    return this.request('/rest/v1/rpc/campaign_rank_prepare', {
+      method:'POST',authenticated:true,body:{p_attempt_id:attemptId}
+    });
+  }
+  async rankReady(attemptId,cardIndex) {
+    return this.request('/rest/v1/rpc/campaign_rank_ready', {
+      method:'POST',authenticated:true,body:{p_attempt_id:attemptId,p_card_index:cardIndex}
+    });
+  }
+  async rankAnswer(attemptId,cardIndex,choice) {
+    return this.request('/rest/v1/rpc/campaign_rank_answer', {
+      method:'POST',authenticated:true,body:{p_attempt_id:attemptId,p_card_index:cardIndex,p_choice:choice}
+    });
+  }
+  async rankForfeit(attemptId,penalty=true) {
+    return this.request('/rest/v1/rpc/campaign_rank_forfeit', {
+      method:'POST',authenticated:true,body:{p_attempt_id:attemptId,p_penalty:penalty}
+    });
+  }
+  async leaderboard(stageUid,kind) {
+    return this.request('/rest/v1/rpc/campaign_stage_leaderboard', {
+      method:'POST',authenticated:true,body:{p_stage_id:stageUid,p_kind:kind,p_limit:10}
+    });
+  }
   async resetTestProgress() {
     // Only the server can authorize this action; the UI's e-mail check
     // is merely a convenience and MUST NOT be treated as security.
