@@ -7,7 +7,7 @@ import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js?v
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
-import { CampaignAccount } from "./campaign-account.js";
+import { CampaignAccount } from "./campaign-account.js?v=0.9.0.1";
 import { currentMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js";
 
 const $ = (selector) => document.querySelector(selector);

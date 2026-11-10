@@ -17,7 +17,10 @@ export class CampaignAccount {
   constructor(config, fetchImpl = fetch) {
     this.projectUrl = config.projectUrl.replace(/\/$/, '');
     this.key = config.publishableKey;
-    this.fetchImpl = fetchImpl;
+    // Browser-native window.fetch requires the Window receiver in some browsers.
+    // Invoking an extracted fetch as `this.fetchImpl(...)` would bind `this`
+    // to CampaignAccount, causing `Illegal invocation` in Chrome/Edge/Brave.
+    this.fetchImpl = (...args) => Reflect.apply(fetchImpl, globalThis, args);
     this.session = readStorage();
     this.user = null;
   }
