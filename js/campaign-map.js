@@ -59,16 +59,21 @@ function refreshScoreHud() {
   $('#score-total').textContent = pointsLabel(run.score.points);
 }
 let toastTimeout;
-let celebrationHideTimer = null;
 let celebrationEndTimer = null;
-function showCompletionCelebration(stage, score) {
+let celebrationDismissal = null;
+let celebrationDismissing = false;
+const celebrationReturnButton = $('#celebration-return-map');
+
+function showCompletionCelebration(stage, score, onReturnToMap) {
   const panel = $('#level-celebration');
   const confetti = $('#celebration-confetti');
-  if (celebrationHideTimer) clearTimeout(celebrationHideTimer);
-  if (celebrationEndTimer) clearTimeout(celebrationEndTimer);
+  if (celebrationEndTimer !== null) clearTimeout(celebrationEndTimer);
+  celebrationEndTimer = null;
+  celebrationDismissal = typeof onReturnToMap === 'function' ? onReturnToMap : null;
+  celebrationDismissing = false;
+  celebrationReturnButton.disabled = false;
   panel.hidden = false;
-  panel.classList.remove('is-leaving');
-  panel.classList.remove('is-visible');
+  panel.classList.remove('is-leaving', 'is-visible');
   $('#celebration-title').textContent = stage.isChallenge ? 'Challenge ukończony!'
     : stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
   $('#celebration-subtitle').textContent = `Podejście ${score.attemptNumber} · ${secondsLabel(score.answerMs)}`;
@@ -88,17 +93,36 @@ function showCompletionCelebration(stage, score) {
     confetti.append(particle);
   }
   requestAnimationFrame(() => panel.classList.add('is-visible'));
-  celebrationHideTimer = setTimeout(() => {
-    panel.classList.add('is-leaving');
-    celebrationEndTimer = setTimeout(() => {
-      panel.hidden = true;
-      panel.classList.remove('is-visible','is-leaving');
-      confetti.replaceChildren();
-      celebrationEndTimer = null;
-    }, CELEBRATION_FADE_MS);
-    celebrationHideTimer = null;
-  }, CELEBRATION_SHOW_MS);
+  // The player decides when to continue; there is no automatic close timer.
+  celebrationReturnButton.focus({ preventScroll: true });
 }
+
+function dismissCompletionCelebration() {
+  const panel = $('#level-celebration');
+  if (panel.hidden || celebrationDismissing) return;
+  celebrationDismissing = true;
+  celebrationReturnButton.disabled = true;
+  panel.classList.add('is-leaving');
+  celebrationEndTimer = window.setTimeout(() => {
+    celebrationEndTimer = null;
+    panel.hidden = true;
+    panel.classList.remove('is-visible', 'is-leaving');
+    $('#celebration-confetti').replaceChildren();
+    const continueToUnlock = celebrationDismissal;
+    celebrationDismissal = null;
+    celebrationDismissing = false;
+    if (screen === 'map') mapScroller.focus({ preventScroll: true });
+    if (typeof continueToUnlock === 'function') continueToUnlock();
+  }, window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 0 : CELEBRATION_FADE_MS);
+}
+celebrationReturnButton.addEventListener('click', dismissCompletionCelebration);
+$('#level-celebration').addEventListener('keydown', (event) => {
+  // Keep keyboard focus inside this one-action modal until the player continues.
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    celebrationReturnButton.focus({ preventScroll: true });
+  }
+});
 
 function showScoreToast(score, onlineSaved = false, leaderboard = null) {
   const toast = $('#score-toast');
@@ -128,9 +152,7 @@ const UNLOCK_SHAKE_MS = 1500;
 const UNLOCK_REVEAL_AT_MS = 900;
 const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 600;
 const ANSWER_EFFECT_MS = 1120;
-const CELEBRATION_SHOW_MS = 3150;
 const CELEBRATION_FADE_MS = 420;
-const CELEBRATION_DURATION_MS = CELEBRATION_SHOW_MS + CELEBRATION_FADE_MS + 120;
 const TEST_RESET_EMAIL = 'admin@followyes.pl';
 const sounds = createCampaignSounds();
 let currentStorageKey = STORAGE_KEY;
@@ -490,7 +512,7 @@ function ensureUnlockMarkerVisible(uid) {
   }
 }
 
-function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0) {
+function prepareUnlockOnMap(stage, nextStage, wasCompleted) {
   for (const id of [unlockTimeout, unlockStartTimeout, unlockRevealTimeout, unlockSwapTimeout]) {
     if (id !== null) window.clearTimeout(id);
   }
@@ -502,14 +524,15 @@ function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0
   const nextUid = newlyUnlocked ? (nextStage.uid || String(nextStage.id)) : null;
   unlockState = { completedUid, nextUid, phase: 'waiting' };
   const currentState = unlockState;
-  const completedName = stage.isChallenge ? `Challenge „${stage.topic}” ukończony!` : stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
   // No overlaid yellow toast: celebration + bottom ranking toast already show success.
   unlockBanner.hidden = true;
   clearRunTimers();
   run = null;
   setScreen('map');
+  let alreadyStarted = false;
   const startUnlock = () => {
-    if (screen !== 'map' || unlockState !== currentState) return;
+    if (alreadyStarted || screen !== 'map' || unlockState !== currentState) return;
+    alreadyStarted = true;
     unlockBanner.hidden = true;
     requestAnimationFrame(() => scrollMapToStage(nextUid || completedUid, 'smooth', nextUid ? completedUid : null));
     unlockRevealTimeout = window.setTimeout(() => {
@@ -547,23 +570,17 @@ function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0
     }));
     unlockRevealTimeout = null;
     }, UNLOCK_SCROLL_DELAY_MS);
+    unlockTimeout = window.setTimeout(() => {
+      if (unlockState !== currentState) return;
+      unlockState = null;
+      unlockBanner.hidden = true;
+      unlockTimeout = null;
+      if (screen === 'map') renderMap();
+      if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
+    }, UNLOCK_ANIMATION_MS);
   };
-  if (delayBeforeUnlockMs > 0) {
-    unlockStartTimeout = window.setTimeout(() => {
-      unlockStartTimeout = null;
-      startUnlock();
-    }, delayBeforeUnlockMs);
-  } else startUnlock();
-  unlockTimeout = window.setTimeout(() => {
-    if (unlockState !== currentState) return;
-    unlockState = null;
-    unlockBanner.hidden = true;
-    unlockTimeout = null;
-    if (screen === 'map') renderMap();
-    if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
-  }, UNLOCK_ANIMATION_MS + delayBeforeUnlockMs);
+  return startUnlock;
 }
-
 // Quickly recenter the long map on the currently playable main level.
 const returnToCurrentButton = $('#map-return-current');
 function currentPlayableStage() {
@@ -815,8 +832,8 @@ async function winRun() {
   save();
   const nextStage = stage.isChallenge ? null :
     activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
-  showUnlockOnMap(stage, nextStage, wasCompleted, CELEBRATION_DURATION_MS);
-  showCompletionCelebration(stage, finishedRun.score);
+  const startUnlockAfterReturn = prepareUnlockOnMap(stage, nextStage, wasCompleted);
+  showCompletionCelebration(stage, finishedRun.score, startUnlockAfterReturn);
   showScoreToast(finishedRun.score,onlineSaved);
   if (onlineSaved && finishedRun.rankedOnline) {
     const toastRef=$('#score-toast');

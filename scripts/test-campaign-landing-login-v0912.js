@@ -43,7 +43,7 @@ assert.match(map, /\$\('#reset-demo'\)\.hidden\s*=\s*true/);
 assert.match(map,/account\.user\?\.email\?\.toLowerCase\(\) === TEST_RESET_EMAIL/);
 assert.match(map,/testResetButton\.hidden = !show/);
 assert.match(accountJs, /rpc\/campaign_test_reset_my_progress/);
-assert.match(campaign, /campaign-map\.js\?v=0\.9\.1\.2/);
+assert.match(campaign, /campaign-map\.js\?v=0\.9\.1\.5/);
 // The signup redirect on the homepage is explicitly the already allowlisted campaign.html,
 // rather than the homepage which might not be present in Supabase redirect URLs.
 let requested = '';

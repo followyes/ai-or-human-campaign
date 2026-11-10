@@ -4,7 +4,7 @@ const js = readFileSync(new URL('../js/campaign-map.js', import.meta.url), 'utf8
 const html = readFileSync(new URL('../campaign.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/campaign.css', import.meta.url), 'utf8');
 const winBlock = js.slice(js.indexOf('function winRun() {'), js.indexOf('\nasync function loseRun('));
-assert.match(winBlock, /showUnlockOnMap\(stage, nextStage, wasCompleted(?:, CELEBRATION_DURATION_MS)?\)/, 'completed stage must return to the map with an unlock reveal');
+assert.match(winBlock, /prepareUnlockOnMap\(stage, nextStage, wasCompleted\)/, 'a completed stage should prepare its unlock after returning to the map');
 assert.doesNotMatch(winBlock, /showResult\(/, 'success must not display a separate result screen');
 assert.match(js, /markStableComplete\(progress, stage\.uid\)/, 'persist completed UUIDs');
 assert.match(js, /requestAnimationFrame\(\(\) => scrollMapToStage/, 'focus completed/unlocked stage');

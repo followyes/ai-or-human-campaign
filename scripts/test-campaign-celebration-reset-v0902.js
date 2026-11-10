@@ -10,10 +10,10 @@ const sql = readFileSync(new URL('../../SUPABASE_SQL/11_test_account_reset_v0902
 for (const id of ['test-account-reset', 'level-celebration','celebration-confetti', 'celebration-title','celebration-points','score-toast']) {
   assert.match(html,new RegExp(`id="${id}"`));
 }
-assert.match(map, /showUnlockOnMap\(stage, nextStage, wasCompleted, CELEBRATION_DURATION_MS\)/);
-assert.match(map, /showCompletionCelebration\(stage, finishedRun\.score\)/);
+assert.match(map, /prepareUnlockOnMap\(stage, nextStage, wasCompleted\)/);
+assert.match(map, /showCompletionCelebration\(stage, finishedRun\.score, startUnlockAfterReturn\)/);
 assert.match(map, /showScoreToast\(finishedRun\.score,onlineSaved\)/);
-assert.match(map, /UNLOCK_ANIMATION_MS \+ delayBeforeUnlockMs/);
+assert.match(map, /UNLOCK_ANIMATION_MS\)/);
 assert.match(map, /localStorage\.removeItem\(GUEST_ATTEMPT_KEY\)/);
 assert.match(css, /\.level-celebration\.is-leaving/);
 assert.match(css, /@keyframes celebration-shower/);

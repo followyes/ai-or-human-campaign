@@ -714,3 +714,17 @@ body {
 /* The color legend below the map has been removed from campaign.html.
    Position the 'Aktualny' helper in the free lower-right corner. */
 .map-return-current { bottom: 14px; }
+
+/* v0.9.1.5 — win screen stays open until the player presses Return to map. */
+.celebration-return-map{
+  display:block;margin:24px auto 0;min-width:210px;max-width:100%;min-height:48px;
+  border:1px solid rgba(134,240,222,.8);border-radius:12px;
+  padding:12px 21px;background:linear-gradient(135deg,#95eee0,#76d7d0);
+  color:#102536;font:inherit;font-size:14px;font-weight:900;line-height:1.25;
+  cursor:pointer;box-shadow:0 8px 24px rgba(98,232,208,.15);
+  transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease;
+}
+.celebration-return-map:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 27px rgba(98,232,208,.28)}
+.celebration-return-map:focus-visible{outline:3px solid #fff;outline-offset:4px}
+.celebration-return-map:disabled{opacity:.55;cursor:default}
+@media(prefers-reduced-motion:reduce){.celebration-return-map{transition:none}}

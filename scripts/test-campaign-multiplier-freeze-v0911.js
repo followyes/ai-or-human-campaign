@@ -17,6 +17,6 @@ assert.match(map,/run\.lockedMultiplier = currentMultiplier\(run\.score\.attempt
 assert.match(map,/run\.lockedMultiplier = currentMultiplier\(run\.score\.attemptNumber, Number\(verified\.response_ms\)\)/);
 assert.match(map,/run\.lockedMultiplier = null;[\s\S]{0,80}refreshScoreHud\(\)/);
 assert.match(map,/function clearRunTimers\(\) \{\n  if \(run\) run\.lockedMultiplier = null/);
-assert.match(html,/campaign-map\.js\?v=0\.9\.1\.2/);
+assert.match(html,/campaign-map\.js\?v=0\.9\.1\.5/);
 assert.ok(map.indexOf('run.lockedMultiplier = currentMultiplier(run.score.attemptNumber, responseMs)') < map.indexOf('await account.rankAnswer('), 'lock occurs before remote request');
 console.log('PASS v0.9.1.1 multiplier freezes during feedback and resets for new card');
