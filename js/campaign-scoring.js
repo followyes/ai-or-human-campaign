@@ -9,6 +9,11 @@ export function currentMultiplier(attemptNumber, elapsedMilliseconds) {
   const seconds = Math.max(0, Number.isFinite(elapsedMilliseconds) ? elapsedMilliseconds / 1000 : 0);
   return Math.max(1, startingMultiplier(attemptNumber) - seconds * MULTIPLIER_DECAY_PER_SECOND);
 }
+/** Freeze the displayed multiplier during committed-answer feedback.
+ * Ranked scoring stays authoritative on the Supabase server. */
+export function displayMultiplier(attemptNumber, elapsedMilliseconds, lockedMultiplier = null) {
+  return Number.isFinite(lockedMultiplier) ? lockedMultiplier : currentMultiplier(attemptNumber, elapsedMilliseconds);
+}
 export function pointsForCorrect(attemptNumber, elapsedMilliseconds) {
   return Math.round(BASE_POINTS * currentMultiplier(attemptNumber, elapsedMilliseconds));
 }

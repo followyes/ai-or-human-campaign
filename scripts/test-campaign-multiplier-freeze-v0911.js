@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {currentMultiplier,displayMultiplier} from '../js/campaign-scoring.js';
+const map=readFileSync(new URL('../js/campaign-map.js',import.meta.url),'utf8');
+const html=readFileSync(new URL('../campaign.html',import.meta.url),'utf8');
+// Dynamic while deciding; frozen after choosing an answer.
+assert.equal(displayMultiplier(1,0),3);
+assert.equal(displayMultiplier(1,5000),2.5);
+const frozen=currentMultiplier(1,5000);
+assert.equal(displayMultiplier(1,5000,frozen),2.5);
+assert.equal(displayMultiplier(1,15000,frozen),2.5);
+assert.equal(displayMultiplier(1,85000,frozen),2.5);
+assert.equal(displayMultiplier(2,85000,currentMultiplier(2,2000)),1.8);
+assert.equal(displayMultiplier(3,5000,currentMultiplier(3,2000)),1);
+assert.equal(displayMultiplier(1,20000,null),1);
+assert.match(map,/run\.lockedMultiplier = currentMultiplier\(run\.score\.attemptNumber, responseMs\)/);
+assert.match(map,/run\.lockedMultiplier = currentMultiplier\(run\.score\.attemptNumber, Number\(verified\.response_ms\)\)/);
+assert.match(map,/run\.lockedMultiplier = null;[\s\S]{0,80}refreshScoreHud\(\)/);
+assert.match(map,/function clearRunTimers\(\) \{\n  if \(run\) run\.lockedMultiplier = null/);
+assert.match(html,/campaign-map\.js\?v=0\.9\.1\.1/);
+assert.ok(map.indexOf('run.lockedMultiplier = currentMultiplier(run.score.attemptNumber, responseMs)') < map.indexOf('await account.rankAnswer('), 'lock occurs before remote request');
+console.log('PASS v0.9.1.1 multiplier freezes during feedback and resets for new card');

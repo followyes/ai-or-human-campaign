@@ -8,7 +8,7 @@ import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
 import { CampaignAccount } from "./campaign-account.js?v=0.9.1";
-import { currentMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js";
+import { currentMultiplier, displayMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js?v=0.9.1.1";
 
 const $ = (selector) => document.querySelector(selector);
 const mapView = $("#campaign-map-view");
@@ -55,7 +55,7 @@ function refreshScoreHud() {
   if (!run?.score || screen!=='play') return;
   const elapsed = Math.max(0,performance.now() - (run.cardShownAt || performance.now()));
   $('#score-attempt').textContent = `Podejście ${run.score.attemptNumber}`;
-  $('#score-multiplier').textContent = `×${currentMultiplier(run.score.attemptNumber,elapsed).toFixed(1)}`;
+  $('#score-multiplier').textContent = `×${displayMultiplier(run.score.attemptNumber, elapsed, run.lockedMultiplier).toFixed(1)}`;
   $('#score-total').textContent = pointsLabel(run.score.points);
 }
 let toastTimeout;
@@ -646,6 +646,7 @@ function applySwipeVisual(dx) {
 }
 
 function clearRunTimers() {
+  if (run) run.lockedMultiplier = null;
   if (feedbackTimeout !== null) window.clearTimeout(feedbackTimeout);
   feedbackTimeout = null;
   pendingAnswer = false;
@@ -696,6 +697,7 @@ async function beginStage(stage) {
   clearRunTimers();
   run = {
     score: createScoreRun(attemptNumber),
+    lockedMultiplier: null,
     remoteAttemptId,
     rankedOnline: Boolean(remoteAttemptId && rankedOrder),
     cardReady: !rankedOrder,
@@ -870,6 +872,10 @@ async function answer(type) {
   // Stop the boss clock during feedback; the animation must not cost playing time.
   if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
   const responseMs = Math.max(0,Math.round(performance.now() - (run.cardShownAt || performance.now())));
+  // Freeze immediately when the player submits an answer; feedback, animation
+  // and network time must not keep decreasing the displayed multiplier.
+  run.lockedMultiplier = currentMultiplier(run.score.attemptNumber, responseMs);
+  refreshScoreHud();
   let correct;
   if (run.rankedOnline) {
     const referenceRun=run;
@@ -880,10 +886,17 @@ async function answer(type) {
       run.score={...run.score,points:Number(verified.points),answerMs:Number(verified.answer_ms),
         correctAnswers:run.score.correctAnswers+(correct?1:0),lastAward:Number(verified.award)};
       run.rankedFinished=Boolean(verified.finished || verified.lost);
+      // Ranked scores use the server's authoritative answer time. Align the
+      // final frozen multiplier with the points actually awarded by Supabase.
+      if (verified.response_ms != null && Number.isFinite(Number(verified.response_ms))) {
+        run.lockedMultiplier = currentMultiplier(run.score.attemptNumber, Number(verified.response_ms));
+      }
       applyRemoteHearts(verified);
     } catch(error) {
       if (run!==referenceRun || screen!=='play') return;
       pendingAnswer=false;
+      run.lockedMultiplier = null;
+      refreshScoreHud();
       card.classList.remove('is-committed');
       clearSwipeVisual();
       feedback.textContent=`Błąd połączenia: ${error.message}. Spróbuj ponownie.`;
