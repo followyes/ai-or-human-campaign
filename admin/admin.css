@@ -1184,3 +1184,164 @@ h2 {
 .campaign-ranks-table td:nth-child(3){font-weight:800;color:#174f65}
 .legacy-results{margin-top:16px;border-top:1px solid #dbe3e6;padding-top:10px}.legacy-results>summary{font-weight:750;cursor:pointer;padding:9px;color:#4b5d65}
 @media(max-width:560px){.campaign-rank-results{padding:10px}.campaign-rank-head h2{font-size:15px}.campaign-rank-head p{font-size:10px}}
+
+
+/* Campaign v0.9.1.7 — results occupy the available page height. */
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  gap: 9px;
+}
+.admin-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 108px;
+}
+.admin-theme-icon { width: 18px; height: 18px; flex: none; }
+.admin-theme-toggle:focus-visible { outline: 3px solid var(--border-strong); outline-offset: 2px; }
+:root:not([data-admin-theme="dark"]) .admin-theme-toggle .theme-sun { display: none; }
+:root[data-admin-theme="dark"] .admin-theme-toggle .theme-moon { display: none; }
+
+.results-workspace {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
+}
+.campaign-rank-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+.campaign-rank-head,
+#campaign-ranks-status { flex: none; }
+.campaign-ranks-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* Full-height results even in the responsive, vertically stacked admin layout. */
+@media (max-width: 980px) {
+  .admin-card[data-view="authorized"][data-active-tab="results"] {
+    height: calc(100dvh - 28px);
+    min-height: 480px;
+    overflow: hidden;
+  }
+  .admin-card[data-view="authorized"][data-active-tab="results"] .authorized-view {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .admin-card[data-active-tab="results"] .results-workspace { min-height: 0; }
+}
+@media (max-width: 680px) {
+  .admin-card[data-view="authorized"][data-active-tab="results"] {
+    height: calc(100dvh - 20px);
+  }
+  .admin-theme-toggle { min-width: 42px; width: 42px; padding: 0; }
+  .admin-theme-toggle #admin-theme-text { display: none; }
+  .admin-header { gap: 8px; }
+  .admin-header-actions { gap: 6px; }
+  .campaign-rank-head { flex-wrap: wrap; }
+  .campaign-rank-head .compact-button { min-height: 36px; }
+}
+
+/* Campaign v0.9.1.7 — dark theme for the *whole* admin app, not only results. */
+:root[data-admin-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1624;
+  --surface: #172333;
+  --surface-soft: #1e2e40;
+  --text: #eff5fc;
+  --muted: #aec0d0;
+  --border: rgba(207, 225, 240, .16);
+  --border-strong: rgba(207, 225, 240, .36);
+  --shadow: 0 22px 60px rgba(0, 0, 0, .32);
+  --success: #68daa4;
+  --danger: #ff8f98;
+  --warning: #f2c16f;
+  --move: #eaae60;
+}
+:root[data-admin-theme="dark"] .admin-secondary-button,
+:root[data-admin-theme="dark"] .queue-item,
+:root[data-admin-theme="dark"] .class-picker span,
+:root[data-admin-theme="dark"] .inventory-filters button,
+:root[data-admin-theme="dark"] .challenge-checkbox-label {
+  background: var(--surface);
+  color: var(--text);
+}
+:root[data-admin-theme="dark"] .admin-primary-button,
+:root[data-admin-theme="dark"] .class-picker input:checked + span,
+:root[data-admin-theme="dark"] .inventory-filters button.is-active {
+  background: #bfeae9;
+  border-color: #bfeae9;
+  color: #122330;
+}
+:root[data-admin-theme="dark"] .inventory-filters button.is-active strong { color: #3f5b64; }
+:root[data-admin-theme="dark"] .field input:focus-visible,
+:root[data-admin-theme="dark"] .drop-zone:hover,
+:root[data-admin-theme="dark"] .drop-zone:focus-visible,
+:root[data-admin-theme="dark"] .drop-zone.is-dragover { background: #26384c; }
+:root[data-admin-theme="dark"] .queue-thumb,
+:root[data-admin-theme="dark"] .inventory-image-wrap { background: #293b50; }
+:root[data-admin-theme="dark"] .inventory-class { background: #c6e6e6; color: #162938; }
+:root[data-admin-theme="dark"] .inventory-select-control::before {
+  border-color: #6f899b;
+  background: #e1edf2;
+}
+:root[data-admin-theme="dark"] .storage-meter { background: rgba(230, 244, 255, .2); }
+:root[data-admin-theme="dark"] .campaign-safety-note { color: var(--muted); }
+:root[data-admin-theme="dark"] .campaign-auto-status {
+  background: #1c3438; border-color: #385659; color: #d4f2ee;
+}
+:root[data-admin-theme="dark"] .campaign-auto-track { background: #365351; }
+:root[data-admin-theme="dark"] .campaign-auto-status p { color: #b4d3cd; }
+:root[data-admin-theme="dark"] .upload-assignment {
+  background: #1d2d3e; border-color: #3a5369;
+}
+:root[data-admin-theme="dark"] .upload-assignment-heading,
+:root[data-admin-theme="dark"] .challenge-checkbox-label,
+:root[data-admin-theme="dark"] .challenge-topic-field { color: var(--text); }
+:root[data-admin-theme="dark"] .upload-assignment-heading span,
+:root[data-admin-theme="dark"] .challenge-checkbox-label small,
+:root[data-admin-theme="dark"] .challenge-topic-field small,
+:root[data-admin-theme="dark"] .upload-track-picker legend { color: var(--muted); }
+:root[data-admin-theme="dark"] .challenge-topic-field input { background: var(--surface-soft); color: var(--text); border-color: var(--border-strong); }
+:root[data-admin-theme="dark"] .challenge-upload-progress { background: #292343; color: #e0cafe; border-color: #5e4b7d; }
+:root[data-admin-theme="dark"] .challenge-upload-meter { background: #48375f; }
+:root[data-admin-theme="dark"] .upload-track-picker label span { border-color: var(--border); }
+:root[data-admin-theme="dark"] .upload-track-picker input:checked + span { background: #bfeae9; color: #122330; border-color: #bfeae9; }
+:root[data-admin-theme="dark"] .move-button { color: #f0b66b; }
+:root[data-admin-theme="dark"] .campaign-rank-results { background: #1b2a39; border-color: #354b59; }
+:root[data-admin-theme="dark"] .campaign-rank-head p,
+:root[data-admin-theme="dark"] #campaign-ranks-status { color: var(--muted); }
+:root[data-admin-theme="dark"] .campaign-ranks-table-wrap { background: #162333; border-color: #354b59; }
+:root[data-admin-theme="dark"] .campaign-ranks-table th { background: #2a4051; color: #ecf4ff; }
+:root[data-admin-theme="dark"] .campaign-ranks-table td { color: #e5eef6; }
+:root[data-admin-theme="dark"] .campaign-ranks-table th,
+:root[data-admin-theme="dark"] .campaign-ranks-table td { border-bottom-color: #304455; }
+:root[data-admin-theme="dark"] .campaign-ranks-table td:nth-child(3) { color: #8fe4e4; }
+:root[data-admin-theme="dark"] .campaign-ranks-table tbody tr:hover { background: rgba(139, 190, 212, .08); }
+:root[data-admin-theme="dark"] .admin-tab-nav button[aria-selected="true"] { background: #2b3e50; }
+:root[data-admin-theme="dark"] .admin-tab-nav button:focus-visible { outline-color: #bfeae9; }
+:root[data-admin-theme="dark"] .admin-secondary-button:hover,
+:root[data-admin-theme="dark"] .inventory-filters button:hover:not(.is-active) { background: #28394b; }
+:root[data-admin-theme="dark"] .admin-secondary-button.danger-button:hover:not(:disabled) { background: rgba(255,143,152,.12); }
+:root[data-admin-theme="dark"] .queue-item[data-state="pending"],
+:root[data-admin-theme="dark"] .queue-item[data-state="duplicate"] { background: #352e26; }
+:root[data-admin-theme="dark"] .queue-item[data-state="done"] { background: #1d382e; }
+:root[data-admin-theme="dark"] .queue-item[data-state="error"] { background: #3b2935; }

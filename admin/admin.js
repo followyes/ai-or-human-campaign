@@ -52,6 +52,28 @@ const logoutButton = document.querySelector("#logout-button");
 const loginTitle = document.querySelector("#login-title");
 const adminTitle = document.querySelector("#admin-title");
 
+// Only the admin panel stores this setting. It does not affect the game theme.
+const ADMIN_THEME_KEY = "ai-or-human.admin.theme.v0917";
+const adminThemeToggle = document.querySelector("#admin-theme-toggle");
+const adminThemeText = document.querySelector("#admin-theme-text");
+function setAdminTheme(theme, { save = false } = {}) {
+  const dark = theme === "dark";
+  document.documentElement.dataset.adminTheme = dark ? "dark" : "light";
+  adminThemeToggle.setAttribute("aria-pressed", String(dark));
+  adminThemeToggle.setAttribute("aria-label", dark ? "Włącz tryb jasny" : "Włącz tryb ciemny");
+  adminThemeToggle.title = dark ? "Włącz tryb jasny" : "Włącz tryb ciemny";
+  adminThemeText.textContent = dark ? "Jasny" : "Ciemny";
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0d1624" : "#eef2f3");
+  if (save) {
+    try { localStorage.setItem(ADMIN_THEME_KEY, dark ? "dark" : "light"); }
+    catch { /* Private browsing may block storage; keep the theme for this view. */ }
+  }
+}
+setAdminTheme(document.documentElement.dataset.adminTheme);
+adminThemeToggle.addEventListener("click", () => {
+  setAdminTheme(document.documentElement.dataset.adminTheme === "dark" ? "light" : "dark", { save: true });
+});
+
 const classInputs = [...document.querySelectorAll('input[name="content-class"]')];
 const uploadAssignment = document.querySelector('#upload-assignment');
 const selectedCategoryHint = document.querySelector('#selected-category-hint');
@@ -207,6 +229,7 @@ function switchAdminTab(tab) {
   if (uploadBusy || deleteBusy || moveBusy || inventoryBusy) return;
   if (tab === activeAdminTab) return;
   activeAdminTab = tab;
+  adminCard.dataset.activeTab = tab;
   const resultsActive = tab === "results";
   tabLibrary.setAttribute("aria-selected", String(!resultsActive));
   tabResults.setAttribute("aria-selected", String(resultsActive));
@@ -223,6 +246,7 @@ function resetAdminTab() {
   rankedBody.replaceChildren();
   rankedStatus.textContent = 'Wybierz zakładkę Wyniki.';
   activeAdminTab = "library";
+  adminCard.dataset.activeTab = "library";
   tabLibrary.setAttribute("aria-selected", "true");
   tabResults.setAttribute("aria-selected", "false");
   tabLibrary.tabIndex = 0;

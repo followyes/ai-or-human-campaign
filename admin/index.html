@@ -7,11 +7,20 @@
   <meta name="robots" content="noindex, nofollow, noarchive">
   <title>AI or Human — Admin</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./admin.css?v=0.9.1">
+  <script>
+    // Apply the saved administrator theme before the stylesheet is painted.
+    try {
+      document.documentElement.dataset.adminTheme =
+        localStorage.getItem('ai-or-human.admin.theme.v0917') === 'dark' ? 'dark' : 'light';
+    } catch {
+      document.documentElement.dataset.adminTheme = 'light';
+    }
+  </script>
+  <link rel="stylesheet" href="./admin.css?v=0.9.1.7">
 </head>
 <body>
   <main class="admin-shell">
-    <section class="admin-card" id="admin-card" data-view="boot" data-boot-visible="false">
+    <section class="admin-card" id="admin-card" data-view="boot" data-boot-visible="false" data-active-tab="library">
       <section id="login-view" class="login-view admin-view" aria-labelledby="login-title" aria-hidden="true" inert>
         <header class="login-header">
           <h1 id="login-title" tabindex="-1">Panel administratora</h1>
@@ -35,7 +44,15 @@
       <section id="authorized-view" class="authorized-view admin-view" aria-labelledby="admin-title" aria-hidden="true" inert>
         <header class="admin-header">
           <h1 id="admin-title" tabindex="-1">Panel administratora</h1>
-          <button class="admin-secondary-button compact-button logout-button" id="logout-button" type="button">Wyloguj</button>
+          <div class="admin-header-actions">
+            <button class="admin-secondary-button compact-button admin-theme-toggle" id="admin-theme-toggle"
+              type="button" aria-label="Włącz tryb ciemny" aria-pressed="false" title="Włącz tryb ciemny">
+              <svg class="admin-theme-icon theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13.2A9 9 0 0 1 10.8 3.1 9 9 0 1 0 20.9 13.2Z"/></svg>
+              <svg class="admin-theme-icon theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+              <span id="admin-theme-text">Ciemny</span>
+            </button>
+            <button class="admin-secondary-button compact-button logout-button" id="logout-button" type="button">Wyloguj</button>
+          </div>
         </header>
 
         <nav class="admin-tab-nav" role="tablist" aria-label="Sekcje panelu administratora">
@@ -192,6 +209,6 @@
     </section>
   </main>
 
-  <script type="module" src="./admin.js?v=0.9.1.4"></script>
+  <script type="module" src="./admin.js?v=0.9.1.7"></script>
 </body>
 </html>
