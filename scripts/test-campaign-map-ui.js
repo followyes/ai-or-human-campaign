@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 const js = readFileSync(new URL('../js/campaign-map.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../campaign.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/campaign.css', import.meta.url), 'utf8');
-const winBlock = js.slice(js.indexOf('function winRun() {'), js.indexOf('\nfunction loseRun('));
+const winBlock = js.slice(js.indexOf('function winRun() {'), js.indexOf('\nasync function loseRun('));
 assert.match(winBlock, /showUnlockOnMap\(stage, nextStage, wasCompleted\)/, 'completed stage must return to the map with an unlock reveal');
 assert.doesNotMatch(winBlock, /showResult\(/, 'success must not display a separate result screen');
 assert.match(js, /markStableComplete\(progress, stage\.uid\)/, 'persist completed UUIDs');

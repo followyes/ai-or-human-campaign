@@ -11,6 +11,6 @@ assert.match(css, /@keyframes v072-unlock-number[^}]*rotate\(-45deg\)/);
 assert.match(css, /@keyframes v075-visible-unlock/);
 assert.match(css, /\.path-node__plate--completed/);
 assert.match(css, /\.journey \.path-stop__title, \.journey \.path-stop__subtitle \{ display: none; \}/);
-assert.match(html,/v=0\.8\.0/);
+assert.match(html,/v=0\.9\.0/);
 assert.ok(js.includes("plateTitle.textContent = stageName.toUpperCase()")); // Challenge Level is an intentional new label.
 console.log('PASS v0.7.5 completed marker, level plate text, visible shake, upright numbers, versioned assets');

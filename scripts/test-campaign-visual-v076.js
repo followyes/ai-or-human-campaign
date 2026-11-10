@@ -11,5 +11,5 @@ assert.match(map, /const newlyUnlocked = !!\(nextStage/);
 assert.match(map, /playDiamondEffect\(item, nextUid \? 'unlock' : 'replay'\)/);
 assert.match(map, /if \(unlockState !== currentState\) return;/);
 assert.match(css, /\.path-stop--unlock-js \.path-node__diamond/);
-assert.match(html, /v=0\.8\.0/);
+assert.match(html, /v=0\.9\.0/);
 console.log('PASS v0.8.0 WAAPI unlock, visible-before-start, replay completion, stable state');

@@ -7,6 +7,8 @@ import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js?v
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
+import { CampaignAccount } from "./campaign-account.js";
+import { currentMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js";
 
 const $ = (selector) => document.querySelector(selector);
 const mapView = $("#campaign-map-view");
@@ -19,6 +21,57 @@ const image = $("#campaign-image");
 const feedback = $("#play-feedback");
 const answerButtons = [$("#answer-human"), $("#answer-ai")];
 const LIVE_STORAGE_KEY = "ai-or-human.campaign.live.v01";
+const GUEST_ATTEMPT_KEY = "ai-or-human.campaign.attempts.v090";
+let account = null;
+let nickname = null;
+let accountBusy = false;
+let stageStartBusy = false;
+let localAttempts = {};
+let cloudAttempts = {};
+try { localAttempts = JSON.parse(localStorage.getItem(GUEST_ATTEMPT_KEY) || '{}') || {}; } catch {}
+function nextLocalAttempt(stage) {
+  const key = String(stage.uid || stage.id);
+  const attempt = Math.max(0, Number(localAttempts[key]) || 0) + 1;
+  localAttempts[key] = attempt;
+  try { localStorage.setItem(GUEST_ATTEMPT_KEY, JSON.stringify(localAttempts)); } catch {}
+  return attempt;
+}
+function useCloud() { return Boolean(account?.signedIn && contentSource === 'supabase'); }
+function applyRemoteHearts(state) {
+  if (!state) return;
+  progress = { ...progress, hearts: Number(state.hearts),
+    nextHeartAt: state.next_heart_at ? Date.parse(state.next_heart_at) : null };
+  redrawHearts();
+}
+async function loadAccountProgress() {
+  if (!useCloud()) return;
+  const snapshot = await account.snapshot();
+  progress = { ...progress, completedStageIds: snapshot.stages.filter(s=>s.completed).map(s=>s.stage_id) };
+  cloudAttempts = Object.fromEntries(snapshot.stages.map(s => [s.stage_id, Number(s.attempts) || 0]));
+  applyRemoteHearts(snapshot.state || { hearts:3,next_heart_at:null });
+  renderMap();
+}
+function refreshScoreHud() {
+  if (!run?.score || screen!=='play') return;
+  const elapsed = Math.max(0,performance.now() - (run.cardShownAt || performance.now()));
+  $('#score-attempt').textContent = `Podejście ${run.score.attemptNumber}`;
+  $('#score-multiplier').textContent = `×${currentMultiplier(run.score.attemptNumber,elapsed).toFixed(1)}`;
+  $('#score-total').textContent = pointsLabel(run.score.points);
+}
+let toastTimeout;
+function showScoreToast(score, onlineSaved = false) {
+  const toast = $('#score-toast');
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toast.replaceChildren();
+  const title = document.createElement('strong'); title.textContent = `${pointsLabel(score.points)} · ${secondsLabel(score.answerMs)}`;
+  const subtitle = document.createElement('small');
+  subtitle.textContent = `Podejście ${score.attemptNumber} · ${onlineSaved ? 'Zapisano na Twoim koncie (wynik testowy)' : 'Wynik lokalny'} · Ranking wkrótce`;
+  toast.append(title,subtitle);
+  toast.hidden = false;
+  requestAnimationFrame(()=>toast.classList.add('is-visible'));
+  toastTimeout = setTimeout(()=>{toast.classList.remove('is-visible');setTimeout(()=>{toast.hidden=true;},380);},4400);
+}
+
 const mapScroller = $("#map-scroll");
 const journey = $("#journey");
 const unlockBanner = $("#map-unlock-banner");
@@ -50,7 +103,7 @@ function setContentNotice(text, demo = true) {
   $("#play-source-text").textContent = demo
     ? "Obrazy demonstracyjne: nie są to prawdziwe fotografie. Odpowiedź jest na karcie."
     : "Zdjęcia z osobnego Supabase. Rozpoznaj źródło obrazu.";
-  $("#campaign-footer-source").textContent = demo ? "Dane lokalne • DEMO" : "Zdjęcia: Supabase • postęp lokalny";
+  $("#campaign-footer-source").textContent = demo ? "Dane lokalne • DEMO" : `Zdjęcia: Supabase • ${useCloud()?"postęp na koncie":"postęp lokalny"}`;
   $("#reset-demo").textContent = demo ? "Zresetuj testowy postęp" : "Zresetuj lokalny postęp";
 }
 
@@ -94,6 +147,7 @@ for (const toggle of soundToggles) {
 refreshSoundToggle();
 
 function save() {
+  if (useCloud()) return; // Never overwrite the browser's guest save while signed in.
   try { localStorage.setItem(currentStorageKey, JSON.stringify(progress)); }
   catch { /* Storage may be disabled; demo continues for this tab only. */ }
 }
@@ -118,6 +172,7 @@ function syncTime() {
     if (screen === "map") renderMap();
   }
   redrawHearts();
+  refreshScoreHud();
   if (screen === "play" && run?.stage.isBoss && run.deadline) {
     const remaining = Math.max(0, run.deadline - Date.now());
     $("#play-timer").textContent = formatTime(remaining);
@@ -142,6 +197,10 @@ function setScreen(name) {
 function renderMap() {
   progress = keepLiveFields(regenerate(progress), progress);
   redrawHearts();
+  $('#sync-status-note').textContent = useCloud()
+    ? 'Postęp i wyniki testowe są zapisywane na Twoim koncie.'
+    : 'Bez konta postęp i punkty zostają na tym urządzeniu.';
+  $('#reset-demo').hidden = useCloud();
   const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
   const challengeDone = activeChallenges.filter(s=>(progress.completedStageIds || []).includes(s.uid)).length;
   progressLabel.textContent = `${doneCount} / ${activeStages.length}${activeChallenges.length ? ` · ✦ ${challengeDone}/${activeChallenges.length}` : ''}`;
@@ -519,7 +578,13 @@ function clearRunTimers() {
   answerButtons.forEach((button) => { button.disabled = false; });
 }
 
-function startStage(stage) {
+async function startStage(stage) {
+  if (stageStartBusy) return;
+  stageStartBusy = true;
+  try { await beginStage(stage); }
+  finally { stageStartBusy = false; }
+}
+async function beginStage(stage) {
   progress = keepLiveFields(regenerate(progress), progress);
   if (sourceLoading || (!stage.isChallenge && !(contentSource === 'supabase'
     ? isStableStageUnlocked(progress,stage,activeStages)
@@ -528,8 +593,26 @@ function startStage(stage) {
     showResult("Brak serc", "Poczekaj na regenerację jednego serca, aby rozpocząć poziom od początku.", "♥", null);
     return;
   }
+  let attemptNumber;
+  let remoteAttemptId = null;
+  if (useCloud()) {
+    try {
+      const entry = await account.begin(stage.uid,stage.isChallenge ? 'challenge' : 'main');
+      attemptNumber = entry.attempt_number;
+      remoteAttemptId = entry.attempt_id;
+      cloudAttempts[stage.uid] = attemptNumber;
+      applyRemoteHearts(entry);
+    } catch (error) {
+      unlockBanner.textContent = `Nie można rozpocząć poziomu na koncie: ${error.message}`;
+      unlockBanner.hidden = false;
+      return;
+    }
+  } else attemptNumber = nextLocalAttempt(stage);
   clearRunTimers();
   run = {
+    score: createScoreRun(attemptNumber),
+    remoteAttemptId,
+    cardShownAt: performance.now(),
     stage,
     deck: shuffleImages(stage.images),
     index: 0,
@@ -559,6 +642,8 @@ function showCard() {
     run.pausedTimeLeft = null;
   }
   const current = run.deck[run.index];
+  run.cardShownAt = performance.now();
+  refreshScoreHud();
   $("#play-counter").textContent = `${run.index + 1} / ${run.deck.length}`;
   $("#play-progress-bar").style.width = `${100 * run.index / run.deck.length}%`;
   feedback.textContent = "Wybierz odpowiedź albo przesuń kartę.";
@@ -567,11 +652,12 @@ function showCard() {
   // Boss timer starts only once the first locally bundled image is ready.
   if (run.stage.isBoss && !run.started) {
     image.onload = () => {
+      if (run) run.cardShownAt = performance.now();
       if (!run || run.started || !run.stage.isBoss) return;
       run.started = true;
       run.deadline = Date.now() + BOSS_LIMIT_MS;
     };
-  } else image.onload = null;
+  } else image.onload = () => { if (run) run.cardShownAt = performance.now(); };
   image.onerror = () => {
     if (run && screen === "play") loseRun("Nie udało się wczytać karty testowej. Sprawdź kompletność plików w assets/campaign/demo.", false);
   };
@@ -593,9 +679,26 @@ function showResult(title, message, symbol, nextStage, primaryLabel = "Kontynuuj
   setScreen("result");
 }
 
-function winRun() {
-  if (!run) return;
+function showCloudSaveError(error, context) {
+  showResult('Błąd zapisu', `${context} nie został zapisany online: ${error.message}. Sprawdź połączenie i zaloguj się ponownie.`, '!', null);
+}
+async function winRun() {
+  if (!run || run.finishing) return;
+  run.finishing = true;
+  const finishedRun = run;
   const stage = run.stage;
+  let onlineSaved = false;
+  if (useCloud() && finishedRun.remoteAttemptId) {
+    try {
+      const result = await account.finish(finishedRun.remoteAttemptId,true,
+        finishedRun.score.points,finishedRun.score.answerMs);
+      applyRemoteHearts(result);
+      onlineSaved = true;
+    } catch (error) {
+      showCloudSaveError(error, 'Poziom ukończony, ale wynik');
+      return;
+    }
+  }
   const wasCompleted = contentSource === 'supabase'
     ? (progress.completedStageIds || []).includes(stage.uid)
     : stage.id <= progress.completed;
@@ -604,10 +707,21 @@ function winRun() {
   const nextStage = stage.isChallenge ? null :
     activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
   showUnlockOnMap(stage, nextStage, wasCompleted);
+  showScoreToast(finishedRun.score,onlineSaved);
 }
-function loseRun(message, deductHeart) {
-  if (!run) return;
-  if (deductHeart) progress = keepLiveFields(takeHeart(progress), progress);
+async function loseRun(message, deductHeart) {
+  if (!run || run.finishing) return;
+  run.finishing = true;
+  if (deductHeart && useCloud() && run.remoteAttemptId) {
+    try {
+      const result = await account.finish(run.remoteAttemptId,false,
+        run.score.points,run.score.answerMs);
+      applyRemoteHearts(result);
+    } catch (error) {
+      showResult('Błąd zapisu',`Nie udało się zapisać przegranej na koncie: ${error.message}`, '!',null);
+      return;
+    }
+  } else if (deductHeart) progress = keepLiveFields(takeHeart(progress), progress);
   save();
   // One mistake ends the attempt. The next run starts at image 1 with a reshuffled full deck.
   const failedStage = run.stage;
@@ -632,7 +746,11 @@ function answer(type) {
   answerButtons.forEach((button) => { button.disabled = true; });
   // Stop the boss clock during feedback; the animation must not cost playing time.
   if (run.stage.isBoss && run.deadline) run.pausedTimeLeft = Math.max(0, run.deadline - Date.now());
+  const responseMs = Math.max(0,Math.round(performance.now() - (run.cardShownAt || performance.now())));
   const correct = run.deck[run.index].type === type;
+  if (correct) run.score = addCorrectScore(run.score,responseMs);
+  else run.score.answerMs += responseMs;
+  refreshScoreHud();
   const area = $(".swipe-area");
   area.classList.remove("is-feedback-success", "is-feedback-error");
   // A forced reflow allows two consecutive identical answers to replay the fade.
@@ -643,7 +761,7 @@ function answer(type) {
   // Do not clearSwipeVisual() here: that previously snapped the card back after 310ms.
   // The card resets only when the next photo is installed or the view is dismissed.
   if (correct) {
-    feedback.textContent = "Dobrze!";
+    feedback.textContent = `Dobrze! +${run.score.lastAward} pkt`;
     feedback.className = "play-feedback is-success";
     feedbackTimeout = window.setTimeout(() => {
       if (run !== referenceRun || screen !== "play") return;
@@ -666,6 +784,7 @@ $("#answer-ai").addEventListener("click", () => answer("ai"));
 $("#back-to-map").addEventListener("click", () => { if (pendingAnswer) return; clearRunTimers(); run = null; setScreen("map"); });
 $("#result-map").addEventListener("click", () => setScreen("map"));
 $("#reset-demo").addEventListener("click", () => {
+  if (useCloud()) return;
   if (!window.confirm("Czy na pewno wyzerować lokalny postęp kampanii i przywrócić 3 serca? Zmiana dotyczy tylko tej przeglądarki.")) return;
   progress = newProgress();
   save();
@@ -730,7 +849,7 @@ async function initializeCampaignSource() {
       contentSource = 'supabase';
       currentStorageKey = LIVE_STORAGE_KEY;
       if (firstLoad) {
-        progress = restoreProgress(LIVE_STORAGE_KEY);
+        if (!account?.signedIn) progress = restoreProgress(LIVE_STORAGE_KEY);
         if (!Array.isArray(progress.completedStageIds)) {
           progress.completedStageIds = readStableCompletedIds(progress, activeStages);
           save();
@@ -747,6 +866,9 @@ async function initializeCampaignSource() {
   } finally {
     sourceLoading = false;
     renderMap();
+    if (contentSource === 'supabase' && account?.signedIn) {
+      try { await loadAccountProgress(); } catch (e) { console.warn('Account snapshot:',e.message); }
+    }
     if (contentSource === 'supabase' && screen === 'map' && !initialMapCentered && !unlockState) {
       initialMapCentered = true;
       const current = activeStages.find(s => !(progress.completedStageIds || []).includes(s.uid)) || activeStages.at(-1);
@@ -755,7 +877,70 @@ async function initializeCampaignSource() {
   }
 }
 
-void initializeCampaignSource();
+// Auth is optional: guests continue using the existing browser save.
+const accountDialog=$('#account-dialog');
+let authMode='signin';
+function setAuthMode(mode) {
+  authMode=mode;
+  $('#account-dialog-title').textContent=mode==='signup'?'Utwórz konto':'Konto gracza';
+  $('#account-nickname-row').hidden=mode!=='signup';
+  $('#account-nickname').required=mode==='signup';
+  $('#account-submit').textContent=mode==='signup'?'Zarejestruj się':'Zaloguj';
+  $('#account-mode-toggle').textContent=mode==='signup'?'Masz konto? Zaloguj się':'Nie masz konta? Zarejestruj się';
+  $('#account-error').textContent='';
+}
+function renderAuthButton() {
+  $('#account-open').textContent=account?.signedIn ? `👤 ${nickname || 'Moje konto'}` : '👤 Konto gracza';
+  const signed=Boolean(account?.signedIn);
+  $('#account-fields').hidden=signed;
+  $('#account-submit').hidden=signed;
+  $('#account-mode-toggle').hidden=signed;
+  $('#account-signout').hidden=!signed;
+  if (signed) {
+    $('#account-explainer').textContent=`Zalogowano jako ${nickname || account.user.email}. Osobiste wyniki są na razie niezweryfikowane — ranking uruchomimy po zabezpieczeniu odpowiedzi.`;
+  } else $('#account-explainer').textContent='Zaloguj się lub utwórz konto. Bez logowania nadal możesz grać z lokalnym postępem.';
+}
+$('#account-open').addEventListener('click',()=>{renderAuthButton();accountDialog.showModal();});
+$('#account-close').addEventListener('click',()=>accountDialog.close());
+$('#account-mode-toggle').addEventListener('click',()=>setAuthMode(authMode==='signin'?'signup':'signin'));
+$('#account-signout').addEventListener('click',async()=>{
+  if (account) await account.signOut();
+  nickname=null;
+  progress=restoreProgress(currentStorageKey);
+  accountDialog.close();renderAuthButton();renderMap();
+});
+$('#account-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  if (!account || accountBusy) return;
+  const email=$('#account-email').value.trim();
+  const password=$('#account-password').value;
+  const proposed=$('#account-nickname').value.trim();
+  accountBusy=true; $('#account-submit').disabled=true; $('#account-error').textContent='';
+  try {
+    if (authMode==='signup') {
+      const signed=await account.signUp(email,password,proposed);
+      if (!signed) { $('#account-error').textContent='Sprawdź e-mail i potwierdź rejestrację, a następnie zaloguj się.'; setAuthMode('signin'); return; }
+    } else await account.signIn(email,password);
+    nickname=await account.ensureProfile(proposed);
+    if (contentSource==='supabase') await loadAccountProgress();
+    renderAuthButton(); accountDialog.close();renderMap();
+  } catch (error) { $('#account-error').textContent=error.message; }
+  finally { accountBusy=false;$('#account-submit').disabled=false; }
+});
+async function startup() {
+  try {
+    const config=resolveSupabasePublicConfig();
+    if (config.configured) {
+      account=new CampaignAccount(config);
+      if (await account.restore()) {
+        nickname=await account.ensureProfile();
+      }
+    }
+  } catch(error) { console.warn('Optional account setup:',error.message); }
+  renderAuthButton();
+  await initializeCampaignSource();
+}
+void startup();
 window.setInterval(syncTime, 250);
 window.addEventListener("pageshow", () => {
   syncTime();

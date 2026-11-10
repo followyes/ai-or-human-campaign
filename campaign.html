@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
   <meta name="description" content="Kampania AI or Human: dynamiczne poziomy, 3 serca i bossowie.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.8.0">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.9.0">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./" aria-label="AI or Human — mapa kampanii"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <span class="edition-label">KAMPANIA • v0.8.0</span>
+      <div class="header-actions"><button id="account-open" class="account-open" type="button">Konto gracza</button><span class="edition-label">KAMPANIA • v0.9.0</span></div>
     </header>
 
     <main>
@@ -49,13 +49,14 @@
           </div>
           <div class="map-legend"><span><i class="legend-dot available"></i> Dostępny</span><span><i class="legend-dot completed"></i> Ukończony</span><span><i class="legend-dot locked"></i> Zablokowany</span></div>
         </div>
-        <p class="footnote">Postęp demonstracyjny nie synchronizuje się między urządzeniami. <button type="button" id="reset-demo" class="text-button">Zresetuj testowy postęp</button></p>
+        <p class="footnote"><span id="sync-status-note">Postęp bez konta pozostaje na tym urządzeniu.</span> <button type="button" id="reset-demo" class="text-button">Zresetuj testowy postęp</button></p>
       </section>
 
       <section id="campaign-play-view" class="play-view" aria-labelledby="play-title" hidden>
         <div class="play-topline"><button id="back-to-map" class="back-button" type="button">← Mapa poziomów</button><span class="eyebrow" id="play-stage-label">POZIOM 1</span></div>
         <div class="play-heading"><div><h1 id="play-title">Rozpoznaj obraz</h1><p id="play-description" class="play-description">Przesuń w lewo: człowiek. W prawo: AI.</p></div><div class="play-status"><div class="play-hearts" id="play-hearts" aria-label="3 z 3 serc">♥ ♥ ♥</div><button id="sound-toggle" type="button" class="sound-toggle sound-toggle--icon" aria-pressed="true" aria-label="Wyłącz dźwięki gry" title="Wyłącz dźwięki gry"><span class="sound-toggle__icon" aria-hidden="true">🔊</span></button></div></div>
         <div class="question-progress"><span id="play-counter">1 / 5</span><span id="play-timer" hidden>01:00</span></div>
+        <div class="score-hud" aria-live="off"><span id="score-attempt">Próba 1</span><strong id="score-multiplier">×3.0</strong><span id="score-total">0 pkt</span></div>
         <div class="progress-track"><div id="play-progress-bar" class="progress-fill"></div></div>
         <div class="demo-note demo-note--compact"><span class="note-dot"></span><span id="play-source-text">Obrazy demonstracyjne: nie są to prawdziwe fotografie. Odpowiedź jest na karcie.</span></div>
         <div class="swipe-area">
@@ -75,8 +76,24 @@
         <div class="result-actions"><button id="result-primary" class="primary-btn" type="button">Kontynuuj</button><button id="result-map" class="secondary-btn" type="button">Wróć do mapy</button></div>
       </section>
     </main>
+    <div id="score-toast" class="score-toast" role="status" aria-live="polite" hidden></div>
     <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
-  <script type="module" src="./js/campaign-map.js?v=0.8.0"></script>
+  <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-dialog-title">
+    <form id="account-form" class="account-form">
+      <div class="account-dialog-top"><h2 id="account-dialog-title">Konto gracza</h2><button id="account-close" type="button" aria-label="Zamknij">✕</button></div>
+      <p id="account-explainer">Zaloguj się, aby zapisywać postępy i wyniki na koncie.</p>
+      <div id="account-fields">
+        <label>E-mail <input id="account-email" name="email" type="email" autocomplete="email" required></label>
+        <label>Hasło <input id="account-password" name="password" type="password" autocomplete="current-password" minlength="8" required></label>
+        <label id="account-nickname-row" hidden>Pseudonim <input id="account-nickname" name="nickname" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]+" autocomplete="nickname"></label>
+      </div>
+      <p id="account-error" class="account-error" role="status" aria-live="polite"></p>
+      <button id="account-submit" class="account-submit" type="submit">Zaloguj</button>
+      <button id="account-mode-toggle" class="account-secondary" type="button">Nie masz konta? Zarejestruj się</button>
+      <button id="account-signout" class="account-secondary" type="button" hidden>Wyloguj</button>
+    </form>
+  </dialog>
+  <script type="module" src="./js/campaign-map.js?v=0.9.0"></script>
 </body>
 </html>

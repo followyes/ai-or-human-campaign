@@ -633,3 +633,25 @@ body {
 .path-stop--challenge .path-node:disabled { opacity:.8; }
 @media(max-width:640px){.journey .path-stop--challenge {width:122px;} .path-stop--challenge .path-node__plate-title {font-size:9px;} .path-stop--challenge .path-node__plate-note {font-size:9px;} }
 @media(max-width:365px){.journey .path-stop--challenge {width:104px;} .path-stop--challenge .path-node__plate-title {font-size:8px;} .path-stop--challenge .path-node__plate-note {font-size:8px;} }
+
+/* v0.9.0 — Compact scoring HUD and optional account dialog. */
+.header-actions{display:flex;align-items:center;gap:8px;min-width:0}
+.account-open{border:1px solid #438b99;background:#18394a;color:#c7f1ee;border-radius:14px;padding:9px 12px;font-size:11px;font-weight:800;white-space:nowrap;max-width:175px;overflow:hidden;text-overflow:ellipsis}
+.account-open:hover{background:#205367}
+.score-hud{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(25,50,67,.82);border:1px solid #3f6072;border-radius:12px;padding:7px 11px;margin-bottom:6px;color:#c8dfea;font-size:12px}
+.score-hud strong{font-size:18px;font-variant-numeric:tabular-nums;color:#f4d47e}
+.score-hud span:last-child{font-variant-numeric:tabular-nums;font-weight:800;color:#a2f0c4}
+.score-toast{position:fixed;z-index:100;bottom:max(22px,env(safe-area-inset-bottom));left:50%;transform:translate(-50%,130%);width:min(420px,calc(100vw - 28px));background:#162c40;border:1px solid #5f9eaf;border-radius:20px;padding:17px 20px;text-align:center;color:#e6f3ff;box-shadow:0 15px 45px #000a;pointer-events:none;transition:transform .35s ease,opacity .35s ease;opacity:0}
+.score-toast.is-visible{transform:translate(-50%,0);opacity:1}
+.score-toast strong{display:block;color:#f7d57b;font-size:25px;line-height:1.4}
+.score-toast small{display:block;color:#b6cdd9;line-height:1.6}
+.score-toast[hidden]{display:none}
+.account-dialog{max-width:min(430px,calc(100vw - 28px));width:100%;border:1px solid #567385;border-radius:20px;background:#132635;color:#ecf7fa;padding:22px;box-shadow:0 30px 120px #000b}
+.account-dialog::backdrop{background:#06121ed9;backdrop-filter:blur(5px)}
+.account-dialog-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.account-dialog h2{margin:0;font-size:23px}.account-dialog-top button{border:0;background:transparent;color:#d5e8eb;font-size:20px}
+.account-dialog p{font-size:13px;color:#b4cbd5;line-height:1.5}
+.account-form label{display:block;font-weight:700;font-size:12px;margin:13px 0 0}.account-form input{display:block;width:100%;min-height:43px;background:#203849;color:#fff;border:1px solid #527188;border-radius:10px;padding:9px 12px;margin-top:6px;font:inherit;font-size:15px}
+.account-form input:focus{outline:2px solid #72d4de;outline-offset:2px}.account-error{min-height:20px;color:#ffaea7!important}.account-submit{min-height:45px;width:100%;border:0;border-radius:12px;color:#112b36;background:#91e7d9;font-weight:850;margin-top:5px}.account-secondary{border:0;background:none;color:#a8dbea;text-decoration:underline;margin:10px auto 0;display:block;font-size:12px}
+.account-secondary[hidden],#account-nickname-row[hidden]{display:none}
+@media(max-width:440px){.edition-label{display:none}.header-actions{gap:4px}.account-open{font-size:10px;padding:7px 8px;max-width:130px}.score-hud{font-size:11px;padding:5px 8px}.score-hud strong{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.score-toast{transition:none}}
