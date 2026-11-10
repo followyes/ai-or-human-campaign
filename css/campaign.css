@@ -655,3 +655,29 @@ body {
 .account-secondary[hidden],#account-nickname-row[hidden]{display:none}
 @media(max-width:440px){.edition-label{display:none}.header-actions{gap:4px}.account-open{font-size:10px;padding:7px 8px;max-width:130px}.score-hud{font-size:11px;padding:5px 8px}.score-hud strong{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.score-toast{transition:none}}
+
+/* v0.9.0.2 — test-account reset and ordered win celebration.
+   This does not change the answer colours or the swipe-feedback gradients. */
+.test-account-reset{border:1px solid rgba(255,174,154,.52);border-radius:12px;background:rgba(76,31,47,.65);color:#ffd9ce;font-weight:800;font-size:11px;padding:9px 11px;white-space:nowrap}
+.test-account-reset:hover:not(:disabled){background:rgba(132,49,66,.78);border-color:#ffc3b4}
+.test-account-reset:disabled{opacity:.5;cursor:not-allowed}
+.test-account-reset[hidden]{display:none!important}
+.level-celebration{position:fixed;z-index:190;inset:0;display:grid;place-items:center;padding:20px;background:rgba(6,16,30,.70);backdrop-filter:blur(7px);opacity:0;pointer-events:auto;transition:opacity .38s ease;overflow:hidden}
+.level-celebration[hidden]{display:none!important}
+.level-celebration.is-visible{opacity:1}
+.level-celebration.is-leaving{opacity:0}
+.celebration-card{position:relative;z-index:2;width:min(425px,calc(100vw - 34px));border:1px solid rgba(249,209,116,.72);border-radius:24px;background:linear-gradient(150deg,#233447 0%,#13273a 63%,#152338 100%);box-shadow:0 0 65px rgba(255,205,117,.28),0 25px 85px rgba(0,0,0,.65);color:#eff7fb;text-align:center;padding:clamp(24px,5vw,40px) 18px;transform:translateY(22px) scale(.87);transition:transform .6s cubic-bezier(.18,1.4,.3,1);overflow:visible}
+.level-celebration.is-visible .celebration-card{transform:translateY(0) scale(1)}
+.celebration-emblem{width:76px;height:76px;margin:0 auto 14px;display:grid;place-items:center;border-radius:50%;font-size:42px;color:#ffe4a1;background:radial-gradient(circle,#715830,#2b3641);border:2px solid #f6d18a;box-shadow:0 0 28px rgba(254,191,80,.34)}
+.celebration-kicker{font-size:11px;font-weight:950;color:#f2d192;letter-spacing:.21em;margin:0 0 8px}
+.celebration-card h2{font-weight:950;font-size:clamp(27px,5vw,35px);line-height:1.15;margin:5px 0 13px;letter-spacing:-.03em}
+.celebration-card p:not(.celebration-kicker){font-size:13px;color:#bed4df;margin:0 0 17px}
+.celebration-card strong{display:block;font-variant-numeric:tabular-nums;color:#ffe28a;font-size:clamp(25px,5vw,36px);text-shadow:0 0 23px #f4b24655}
+.celebration-confetti{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.confetti-particle{position:absolute;top:48%;left:50%;width:9px;height:16px;border-radius:2px;background:var(--color);opacity:0;animation:celebration-shower 2.1s cubic-bezier(.16,.45,.3,1) var(--delay) forwards;transform-origin:center}
+.confetti-particle:nth-child(3n){width:8px;height:8px;border-radius:50%}
+@keyframes celebration-shower{0%{opacity:0;transform:translate(-50%,-50%) scale(.25) rotate(0)}15%{opacity:1}55%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--spin)) scale(.8)}}
+/* The bottom provisional score strip remains visible beside the win modal. */
+.score-toast{z-index:220;bottom:max(14px,env(safe-area-inset-bottom));}
+@media(max-width:520px){.test-account-reset{padding:7px;font-size:9px;max-width:100px;white-space:normal;line-height:1.2}.celebration-card{padding:25px 14px}.celebration-emblem{width:61px;height:61px;font-size:34px}.score-toast{bottom:max(12px,env(safe-area-inset-bottom));padding:10px 13px}.score-toast strong{font-size:19px}.score-toast small{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.level-celebration,.celebration-card{transition:none!important}.confetti-particle{animation:none!important;display:none!important}}

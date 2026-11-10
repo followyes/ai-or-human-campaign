@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#101b27">
   <title>AI or Human — Campaign</title>
   <meta name="description" content="Kampania AI or Human: dynamiczne poziomy, 3 serca i bossowie.">
-  <link rel="stylesheet" href="./css/campaign.css?v=0.9.0">
+  <link rel="stylesheet" href="./css/campaign.css?v=0.9.0.2">
 </head>
 <body>
   <div class="ambient ambient-a" aria-hidden="true"></div>
@@ -14,7 +14,7 @@
   <div class="campaign-wrap">
     <header class="site-header">
       <a class="brand" href="./" aria-label="AI or Human — mapa kampanii"><span class="brand-mark">AI<span>?</span></span><span class="brand-type">AI <em>or</em> HUMAN<small>CAMPAIGN MODE</small></span></a>
-      <div class="header-actions"><button id="account-open" class="account-open" type="button">Konto gracza</button><span class="edition-label">KAMPANIA • v0.9.0.1</span></div>
+      <div class="header-actions"><button id="test-account-reset" class="test-account-reset" type="button" hidden title="Reset testowego postępu na koncie">↺ Reset postępu</button><button id="account-open" class="account-open" type="button">Konto gracza</button><span class="edition-label">KAMPANIA • v0.9.0.2</span></div>
     </header>
 
     <main>
@@ -76,6 +76,16 @@
         <div class="result-actions"><button id="result-primary" class="primary-btn" type="button">Kontynuuj</button><button id="result-map" class="secondary-btn" type="button">Wróć do mapy</button></div>
       </section>
     </main>
+    <div id="level-celebration" class="level-celebration" role="status" aria-live="polite" hidden>
+      <div id="celebration-confetti" class="celebration-confetti" aria-hidden="true"></div>
+      <div class="celebration-card">
+        <span class="celebration-emblem" aria-hidden="true">✦</span>
+        <p class="celebration-kicker">DOBRA ROBOTA!</p>
+        <h2 id="celebration-title">Poziom ukończony!</h2>
+        <p id="celebration-subtitle">Wszystkie odpowiedzi poprawne</p>
+        <strong id="celebration-points">+0 pkt</strong>
+      </div>
+    </div>
     <div id="score-toast" class="score-toast" role="status" aria-live="polite" hidden></div>
     <footer class="site-footer"><span>AI OR HUMAN / CAMPAIGN</span><span id="campaign-footer-source">Dane lokalne • DEMO</span></footer>
   </div>
@@ -94,6 +104,6 @@
       <button id="account-signout" class="account-secondary" type="button" hidden>Wyloguj</button>
     </form>
   </dialog>
-  <script type="module" src="./js/campaign-map.js?v=0.9.0.1"></script>
+  <script type="module" src="./js/campaign-map.js?v=0.9.0.2"></script>
 </body>
 </html>

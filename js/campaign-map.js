@@ -7,7 +7,7 @@ import { fetchCampaignStages, CampaignSourceError } from "./campaign-source.js?v
 import { resolveSupabasePublicConfig } from "./content-source.js";
 import { readStableCompletedIds, completedCount, isStableStageUnlocked, markStableComplete, keepLiveFields } from "./campaign-progress.js";
 import { createCampaignSounds } from "./campaign-sfx.js";
-import { CampaignAccount } from "./campaign-account.js?v=0.9.0.1";
+import { CampaignAccount } from "./campaign-account.js?v=0.9.0.2";
 import { currentMultiplier, createScoreRun, addCorrectScore, secondsLabel, pointsLabel } from "./campaign-scoring.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -59,6 +59,47 @@ function refreshScoreHud() {
   $('#score-total').textContent = pointsLabel(run.score.points);
 }
 let toastTimeout;
+let celebrationHideTimer = null;
+let celebrationEndTimer = null;
+function showCompletionCelebration(stage, score) {
+  const panel = $('#level-celebration');
+  const confetti = $('#celebration-confetti');
+  if (celebrationHideTimer) clearTimeout(celebrationHideTimer);
+  if (celebrationEndTimer) clearTimeout(celebrationEndTimer);
+  panel.hidden = false;
+  panel.classList.remove('is-leaving');
+  panel.classList.remove('is-visible');
+  $('#celebration-title').textContent = stage.isChallenge ? 'Challenge ukończony!'
+    : stage.isBoss ? 'Boss pokonany!' : `Poziom ${stage.id} ukończony!`;
+  $('#celebration-subtitle').textContent = `Podejście ${score.attemptNumber} · ${secondsLabel(score.answerMs)}`;
+  $('#celebration-points').textContent = `+${pointsLabel(score.points)}`;
+  confetti.replaceChildren();
+  const colors = ['#54a8ff', '#ff59cf', '#ffcc72', '#9cefd6', '#ffffff'];
+  for (let i = 0; i < 34; i++) {
+    const particle = document.createElement('span');
+    particle.className = 'confetti-particle';
+    const angle = (i * 137.508) * Math.PI / 180;
+    const distance = 110 + (i % 9) * 31;
+    particle.style.setProperty('--dx', `${Math.round(Math.cos(angle) * distance)}px`);
+    particle.style.setProperty('--dy', `${Math.round(Math.sin(angle) * distance + 110)}px`);
+    particle.style.setProperty('--spin', `${(i % 2 ? -1 : 1) * (390 + i * 23)}deg`);
+    particle.style.setProperty('--delay', `${(i % 5) * 46}ms`);
+    particle.style.setProperty('--color', colors[i % colors.length]);
+    confetti.append(particle);
+  }
+  requestAnimationFrame(() => panel.classList.add('is-visible'));
+  celebrationHideTimer = setTimeout(() => {
+    panel.classList.add('is-leaving');
+    celebrationEndTimer = setTimeout(() => {
+      panel.hidden = true;
+      panel.classList.remove('is-visible','is-leaving');
+      confetti.replaceChildren();
+      celebrationEndTimer = null;
+    }, CELEBRATION_FADE_MS);
+    celebrationHideTimer = null;
+  }, CELEBRATION_SHOW_MS);
+}
+
 function showScoreToast(score, onlineSaved = false) {
   const toast = $('#score-toast');
   if (toastTimeout) clearTimeout(toastTimeout);
@@ -83,6 +124,10 @@ const UNLOCK_SHAKE_MS = 1500;
 const UNLOCK_REVEAL_AT_MS = 900;
 const UNLOCK_ANIMATION_MS = UNLOCK_SCROLL_DELAY_MS + UNLOCK_SHAKE_MS + 600;
 const ANSWER_EFFECT_MS = 1120;
+const CELEBRATION_SHOW_MS = 3150;
+const CELEBRATION_FADE_MS = 420;
+const CELEBRATION_DURATION_MS = CELEBRATION_SHOW_MS + CELEBRATION_FADE_MS + 120;
+const TEST_RESET_EMAIL = 'admin@followyes.pl';
 const sounds = createCampaignSounds();
 let currentStorageKey = STORAGE_KEY;
 let activeStages = STAGES;
@@ -90,6 +135,7 @@ let sourceLoading = false;
 let contentSource = "demo";
 let unlockState = null;
 let unlockTimeout = null;
+let unlockStartTimeout = null;
 let unlockRevealTimeout = null;
 let unlockSwapTimeout = null;
 let layoutFrame = null;
@@ -183,6 +229,7 @@ function syncTime() {
 function setScreen(name) {
   const previousScreen = screen;
   screen = name;
+  refreshTestResetButton();
   mapView.hidden = name !== "map";
   playView.hidden = name !== "play";
   resultView.hidden = name !== "result";
@@ -438,11 +485,11 @@ function ensureUnlockMarkerVisible(uid) {
   }
 }
 
-function showUnlockOnMap(stage, nextStage, wasCompleted) {
-  for (const id of [unlockTimeout, unlockRevealTimeout, unlockSwapTimeout]) {
+function showUnlockOnMap(stage, nextStage, wasCompleted, delayBeforeUnlockMs = 0) {
+  for (const id of [unlockTimeout, unlockStartTimeout, unlockRevealTimeout, unlockSwapTimeout]) {
     if (id !== null) window.clearTimeout(id);
   }
-  unlockTimeout = unlockRevealTimeout = unlockSwapTimeout = null;
+  unlockTimeout = unlockStartTimeout = unlockRevealTimeout = unlockSwapTimeout = null;
   const newlyUnlocked = !!(nextStage && !wasCompleted && !(contentSource === 'supabase'
     ? (progress.completedStageIds || []).includes(nextStage.uid)
     : nextStage.id <= progress.completed));
@@ -454,13 +501,15 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
   unlockBanner.textContent = newlyUnlocked
     ? `${completedName} Zaraz odblokujemy ${nextStage.isBoss ? 'kolejnego bossa' : `poziom ${nextStage.id}`}!`
     : `${completedName} ${wasCompleted ? 'Zaliczone ponownie!' : 'Wszystkie dostępne etapy ukończone!'}`;
-  unlockBanner.hidden = false;
+  unlockBanner.hidden = delayBeforeUnlockMs > 0;
   clearRunTimers();
   run = null;
   setScreen('map');
-  requestAnimationFrame(() => scrollMapToStage(nextUid || completedUid, 'smooth', nextUid ? completedUid : null));
-
-  unlockRevealTimeout = window.setTimeout(() => {
+  const startUnlock = () => {
+    if (screen !== 'map' || unlockState !== currentState) return;
+    unlockBanner.hidden = false;
+    requestAnimationFrame(() => scrollMapToStage(nextUid || completedUid, 'smooth', nextUid ? completedUid : null));
+    unlockRevealTimeout = window.setTimeout(() => {
     if (screen !== 'map' || unlockState !== currentState) return;
     const uid = nextUid || completedUid;
     ensureUnlockMarkerVisible(uid);
@@ -494,7 +543,14 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
       }, UNLOCK_REVEAL_AT_MS);
     }));
     unlockRevealTimeout = null;
-  }, UNLOCK_SCROLL_DELAY_MS);
+    }, UNLOCK_SCROLL_DELAY_MS);
+  };
+  if (delayBeforeUnlockMs > 0) {
+    unlockStartTimeout = window.setTimeout(() => {
+      unlockStartTimeout = null;
+      startUnlock();
+    }, delayBeforeUnlockMs);
+  } else startUnlock();
   unlockTimeout = window.setTimeout(() => {
     if (unlockState !== currentState) return;
     unlockState = null;
@@ -502,7 +558,7 @@ function showUnlockOnMap(stage, nextStage, wasCompleted) {
     unlockTimeout = null;
     if (screen === 'map') renderMap();
     if (screen === 'map' && contentSource === 'supabase') void initializeCampaignSource();
-  }, UNLOCK_ANIMATION_MS);
+  }, UNLOCK_ANIMATION_MS + delayBeforeUnlockMs);
 }
 
 // Native swipe/scroll on touch; grab-and-drag on desktop, without accidental level clicks.
@@ -706,7 +762,8 @@ async function winRun() {
   save();
   const nextStage = stage.isChallenge ? null :
     activeStages[activeStages.findIndex(s => (s.uid || String(s.id)) === (stage.uid || String(stage.id))) + 1] || null;
-  showUnlockOnMap(stage, nextStage, wasCompleted);
+  showUnlockOnMap(stage, nextStage, wasCompleted, CELEBRATION_DURATION_MS);
+  showCompletionCelebration(stage, finishedRun.score);
   showScoreToast(finishedRun.score,onlineSaved);
 }
 async function loseRun(message, deductHeart) {
@@ -787,6 +844,8 @@ $("#reset-demo").addEventListener("click", () => {
   if (useCloud()) return;
   if (!window.confirm("Czy na pewno wyzerować lokalny postęp kampanii i przywrócić 3 serca? Zmiana dotyczy tylko tej przeglądarki.")) return;
   progress = newProgress();
+  localAttempts = {};
+  try { localStorage.removeItem(GUEST_ATTEMPT_KEY); } catch {}
   save();
   renderMap();
 });
@@ -878,6 +937,36 @@ async function initializeCampaignSource() {
 }
 
 // Auth is optional: guests continue using the existing browser save.
+const testResetButton = $('#test-account-reset');
+function refreshTestResetButton() {
+  const show = Boolean(account?.signedIn &&
+    account.user?.email?.toLowerCase() === TEST_RESET_EMAIL);
+  testResetButton.hidden = !show;
+  testResetButton.disabled = accountBusy || screen === 'play';
+}
+testResetButton.addEventListener('click', async () => {
+  if (!account?.signedIn || account.user?.email?.toLowerCase() !== TEST_RESET_EMAIL || accountBusy) return;
+  if (screen === 'play') {
+    window.alert('Zakończ rozgrywkę lub wróć na mapę przed resetem.');
+    return;
+  }
+  if (!window.confirm('Zresetować CAŁY postęp konta testowego? Utracisz ukończenia, punkty, liczbę podejść oraz bieżący stan serc. Konto i pseudonim zostaną.')) return;
+  accountBusy = true;
+  testResetButton.disabled = true;
+  try {
+    await account.resetTestProgress();
+    cloudAttempts = {};
+    progress = { ...newProgress(), completedStageIds: [] };
+    await loadAccountProgress();
+    renderMap();
+    window.alert('Postęp konta testowego zresetowany. Następna pierwsza próba rozpocznie się od ×3.0.');
+  } catch (error) {
+    window.alert(`Nie udało się zresetować konta: ${error.message}`);
+  } finally {
+    accountBusy = false;
+    refreshTestResetButton();
+  }
+});
 const accountDialog=$('#account-dialog');
 let authMode='signin';
 function setAuthMode(mode) {
@@ -891,6 +980,7 @@ function setAuthMode(mode) {
 }
 function renderAuthButton() {
   $('#account-open').textContent=account?.signedIn ? `👤 ${nickname || 'Moje konto'}` : '👤 Konto gracza';
+  refreshTestResetButton();
   const signed=Boolean(account?.signedIn);
   $('#account-fields').hidden=signed;
   $('#account-submit').hidden=signed;

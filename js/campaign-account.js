@@ -112,6 +112,13 @@ export class CampaignAccount {
       method:'POST',authenticated:true,body:{p_stage_id:stageUid,p_kind:kind}
     });
   }
+  async resetTestProgress() {
+    // Only the server can authorize this action; the UI's e-mail check
+    // is merely a convenience and MUST NOT be treated as security.
+    return this.request('/rest/v1/rpc/campaign_test_reset_my_progress', {
+      method: 'POST', authenticated: true, body: {}
+    });
+  }
   async finish(attemptId, success, points, elapsedMs) {
     return this.request('/rest/v1/rpc/campaign_player_finish', {
       method:'POST',authenticated:true,
