@@ -60,6 +60,7 @@ function refreshScoreHud() {
 }
 let toastTimeout;
 let celebrationEndTimer = null;
+let scoreToastPinned = false;
 let celebrationDismissal = null;
 let celebrationDismissing = false;
 const celebrationReturnButton = $('#celebration-return-map');
@@ -71,6 +72,8 @@ function showCompletionCelebration(stage, score, onReturnToMap) {
   celebrationEndTimer = null;
   celebrationDismissal = typeof onReturnToMap === 'function' ? onReturnToMap : null;
   celebrationDismissing = false;
+  scoreToastPinned = true;
+  if (toastTimeout !== null && toastTimeout !== undefined) { clearTimeout(toastTimeout); toastTimeout = null; }
   celebrationReturnButton.disabled = false;
   panel.hidden = false;
   panel.classList.remove('is-leaving', 'is-visible');
@@ -101,6 +104,7 @@ function dismissCompletionCelebration() {
   const panel = $('#level-celebration');
   if (panel.hidden || celebrationDismissing) return;
   celebrationDismissing = true;
+  hideScoreToast(); // Result strip and congratulation modal close together.
   celebrationReturnButton.disabled = true;
   panel.classList.add('is-leaving');
   celebrationEndTimer = window.setTimeout(() => {
@@ -124,9 +128,24 @@ $('#level-celebration').addEventListener('keydown', (event) => {
   }
 });
 
+function hideScoreToast() {
+  scoreToastPinned = false;
+  if (toastTimeout !== null && toastTimeout !== undefined) clearTimeout(toastTimeout);
+  toastTimeout = null;
+  const toast = $('#score-toast');
+  if (toast.hidden) return;
+  toast.classList.remove('is-visible');
+  const fadeMs = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 0 : 380;
+  toastTimeout = window.setTimeout(() => {
+    toast.hidden = true;
+    toastTimeout = null;
+  }, fadeMs);
+}
+
 function showScoreToast(score, onlineSaved = false, leaderboard = null) {
   const toast = $('#score-toast');
-  if (toastTimeout) clearTimeout(toastTimeout);
+  if (toastTimeout !== null && toastTimeout !== undefined) clearTimeout(toastTimeout);
+  toastTimeout = null;
   toast.replaceChildren();
   const title = document.createElement('strong'); title.textContent = `${pointsLabel(score.points)} · ${secondsLabel(score.answerMs)}`;
   const subtitle = document.createElement('small');
@@ -138,7 +157,8 @@ function showScoreToast(score, onlineSaved = false, leaderboard = null) {
   toast.append(title,subtitle);
   toast.hidden = false;
   requestAnimationFrame(()=>toast.classList.add('is-visible'));
-  toastTimeout = setTimeout(()=>{toast.classList.remove('is-visible');setTimeout(()=>{toast.hidden=true;},380);},4400);
+  // Keep the ranking panel open alongside congratulations until Return to map.
+  if (!scoreToastPinned) toastTimeout = window.setTimeout(hideScoreToast, 4400);
 }
 
 const mapScroller = $("#map-scroll");
@@ -838,7 +858,7 @@ async function winRun() {
   if (onlineSaved && finishedRun.rankedOnline) {
     const toastRef=$('#score-toast');
     void account.leaderboard(stage.uid,stage.isChallenge?'challenge':'main').then(ranking=>{
-      if (toastRef.hidden) return;
+      if (!scoreToastPinned || celebrationDismissing || toastRef.hidden) return;
       showScoreToast(finishedRun.score,true,ranking);
     }).catch(error=>console.warn('Ranking:',error.message));
   }

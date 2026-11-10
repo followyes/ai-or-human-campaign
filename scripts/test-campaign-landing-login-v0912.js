@@ -16,12 +16,12 @@ for (const html of [home, alias]) {
   for (const id of ['profile-button','landing-account-caption','landing-account-dialog','landing-account-form','landing-account-email','landing-account-password','landing-account-nickname-row','landing-account-switch','landing-account-submit','landing-account-signed','landing-account-display-name','landing-account-signout']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  assert.match(html, /landing-account\.js\?v=0\.9\.1\.4/);
-  assert.match(html, /game\.js\?v=0\.9\.1\.4/);
-  assert.match(html, /style\.css\?v=0\.9\.1\.4/);
+  assert.match(html, /landing-account\.js\?v=0\.9\.1\.6/);
+  assert.match(html, /game\.js\?v=0\.9\.1\.6/);
+  assert.match(html, /style\.css\?v=0\.9\.1\.6/);
   assert.match(html, /href="\.\/campaign\.html"/, 'guest path remains available');
   assert.match(html, /Przejdź do mapy gry/);
-  assert.match(html, /campaign-play-cta/);
+  assert.match(html, /campaign-play-icon/);
   assert.doesNotMatch(html, /5 poziomów, boss i 3 serca/);
   assert.match(html, /id="landing-account-dialog"[^>]*aria-labelledby="landing-account-title"/);
 }
@@ -43,7 +43,7 @@ assert.match(map, /\$\('#reset-demo'\)\.hidden\s*=\s*true/);
 assert.match(map,/account\.user\?\.email\?\.toLowerCase\(\) === TEST_RESET_EMAIL/);
 assert.match(map,/testResetButton\.hidden = !show/);
 assert.match(accountJs, /rpc\/campaign_test_reset_my_progress/);
-assert.match(campaign, /campaign-map\.js\?v=0\.9\.1\.5/);
+assert.match(campaign, /campaign-map\.js\?v=0\.9\.1\.6/);
 // The signup redirect on the homepage is explicitly the already allowlisted campaign.html,
 // rather than the homepage which might not be present in Supabase redirect URLs.
 let requested = '';

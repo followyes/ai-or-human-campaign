@@ -23,7 +23,7 @@ function fakeClassList() {
   return { add: (...items) => items.forEach(v => classes.add(v)), remove: (...items) => items.forEach(v => classes.delete(v)), has: item => classes.has(item) };
 }
 function el() { return {hidden: true, disabled:false, textContent:'',classList:fakeClassList(),style:{setProperty(){}},replaceChildren(){},append(){},focus(){this.focused=true},addEventListener(name,fn){this[name]=fn}}; }
-const elements = Object.fromEntries(['level-celebration','celebration-confetti','celebration-title','celebration-subtitle','celebration-points','celebration-return-map'].map(k => [k,el()]));
+const elements = Object.fromEntries(['level-celebration','celebration-confetti','celebration-title','celebration-subtitle','celebration-points','celebration-return-map','score-toast'].map(k => [k,el()]));
 let nextTimerId=1; const timers=new Map();
 let unlocked=0;
 const context={
@@ -34,6 +34,7 @@ const context={
   clearTimeout:id=>timers.delete(id),
   secondsLabel:()=> '4,2 s',pointsLabel:()=> '365 pkt',
   CELEBRATION_FADE_MS:420,
+  toastTimeout: undefined,
   screen:"map", mapScroller:el()
 };
 const block=js.slice(js.indexOf('let celebrationEndTimer = null;'),js.indexOf('\nfunction showScoreToast('));

@@ -22,7 +22,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-dark.webp">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-light.webp">
-  <link rel="stylesheet" href="./css/style.css?v=0.9.1.4">
+  <link rel="stylesheet" href="./css/style.css?v=0.9.1.6">
 </head>
 <body data-public-view="mode-select">
   <div class="game-atmosphere" id="game-atmosphere" aria-hidden="true">
@@ -153,11 +153,10 @@
           </div>
 
           <div class="game-mode-list" aria-label="Tryby gry">
-            <a class="game-mode-card campaign-mode-entry" id="campaign-mode-link" href="./campaign.html" aria-label="Przejdź do mapy gry — Play">
-              <span class="game-mode-card__icon" aria-hidden="true">★</span>
+            <a class="game-mode-card campaign-mode-entry" id="campaign-mode-link" href="./campaign.html" aria-label="Przejdź do mapy gry">
               <span class="game-mode-card__copy">
                 <strong>Przejdź do mapy gry</strong>
-                <span class="campaign-play-cta"><span aria-hidden="true">▶</span> Play</span>
+                <span class="campaign-play-icon" aria-hidden="true">▶</span>
               </span>
             </a>
             <button class="game-mode-card" id="classic-mode-button" type="button" data-game-mode="classic" hidden disabled tabindex="-1" aria-hidden="true">
@@ -407,7 +406,7 @@
     <p class="landing-account-dialog__guest">Możesz też grać bez logowania — wtedy postęp pozostaje na tym urządzeniu.</p>
   </dialog>
 
-  <script type="module" src="./js/landing-account.js?v=0.9.1.4"></script>
-  <script type="module" src="./js/game.js?v=0.9.1.4"></script>
+  <script type="module" src="./js/landing-account.js?v=0.9.1.6"></script>
+  <script type="module" src="./js/game.js?v=0.9.1.6"></script>
 </body>
 </html>
