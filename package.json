@@ -1,6 +1,6 @@
 {
   "name": "ai-or-human-campaign",
-  "version": "0.9.1.2",
+  "version": "0.9.1.4",
   "private": true,
   "type": "module",
   "scripts": {

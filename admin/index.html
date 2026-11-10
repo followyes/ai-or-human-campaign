@@ -182,43 +182,6 @@
             <p id="campaign-ranks-status" role="status" aria-live="polite">Wybierz zakładkę Wyniki.</p>
             <div class="campaign-ranks-table-wrap"><table class="campaign-ranks-table"><thead><tr><th>Gracz</th><th>Etap</th><th>Punkty</th><th>Czas</th><th>Próba</th><th>Zapis</th></tr></thead><tbody id="campaign-ranks-body"></tbody></table></div>
           </section>
-          <details class="legacy-results"><summary>Starsze wyniki Classic / Speed Run</summary>
-          <div class="results-topline">
-            <h2>Wyniki rozgrywek</h2>
-            <button type="button" id="results-clear" class="admin-secondary-button compact-button danger-button">Wyczyść historię</button>
-          </div>
-          <form id="results-filters" class="results-filters" autocomplete="off">
-            <label class="results-field results-search">
-              <span>Szukaj</span>
-              <input id="results-search" type="search" maxlength="80" placeholder="Nazwa lub pełny identyfikator" aria-label="Nazwa gracza lub pełne ID">
-            </label>
-            <label class="results-field"><span>Tryb</span>
-              <select id="results-mode"><option value="">Wszystkie</option><option value="classic">Klasyczny</option><option value="speed-run">Speed Run</option></select>
-            </label>
-            <label class="results-field"><span>Trudność</span>
-              <select id="results-difficulty" disabled><option value="">Wszystkie</option><option value="easy">Łatwy</option><option value="medium">Średni</option><option value="hard">Trudny</option></select>
-            </label>
-            <label class="results-field"><span>Zakończono od</span><input id="results-date-from" type="date"></label>
-            <label class="results-field"><span>Zakończono do</span><input id="results-date-to" type="date"></label>
-            <label class="results-field"><span>Sortowanie</span>
-              <select id="results-sort"><option value="newest">Najnowsze</option><option value="oldest">Najstarsze</option><option value="best">Najwyższy %</option><option value="most">Najwięcej trafień</option></select>
-            </label>
-            <button type="button" class="admin-secondary-button compact-button results-reset" id="results-reset">Wyczyść filtry</button>
-          </form>
-          <p class="campaign-safety-note">Archiwalne wyniki starszych trybów. Nowe rankingi kampanii znajdują się powyżej.</p>
-          <p id="results-status" class="results-status" role="status" aria-live="polite">Wybierz zakładkę Wyniki, aby załadować historię.</p>
-          <div class="results-scroll" id="results-scroll">
-            <div class="results-head" aria-hidden="true"><span>Gracz</span><span>Wynik</span><span>Zakończenie / zapis</span><span>Powiązania i akcje</span></div>
-            <div id="results-list" class="results-list"></div>
-          </div>
-          <div class="results-footer">
-            <span id="results-page-label">—</span>
-            <div class="results-pager">
-              <button type="button" class="admin-secondary-button compact-button" id="results-prev" disabled>Poprzednia</button>
-              <button type="button" class="admin-secondary-button compact-button" id="results-next" disabled>Następna</button>
-            </div>
-          </div>
-          </details>
         </section>
       </section>
 
@@ -229,6 +192,6 @@
     </section>
   </main>
 
-  <script type="module" src="./admin.js?v=0.9.1"></script>
+  <script type="module" src="./admin.js?v=0.9.1.4"></script>
 </body>
 </html>

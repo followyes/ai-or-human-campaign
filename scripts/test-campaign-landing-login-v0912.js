@@ -16,10 +16,13 @@ for (const html of [home, alias]) {
   for (const id of ['profile-button','landing-account-caption','landing-account-dialog','landing-account-form','landing-account-email','landing-account-password','landing-account-nickname-row','landing-account-switch','landing-account-submit','landing-account-signed','landing-account-display-name','landing-account-signout']) {
     assert.match(html, new RegExp(`id="${id}"`));
   }
-  assert.match(html, /landing-account\.js\?v=0\.9\.1\.2/);
-  assert.match(html, /game\.js\?v=0\.9\.1\.2/);
-  assert.match(html, /style\.css\?v=0\.9\.1\.2/);
+  assert.match(html, /landing-account\.js\?v=0\.9\.1\.4/);
+  assert.match(html, /game\.js\?v=0\.9\.1\.4/);
+  assert.match(html, /style\.css\?v=0\.9\.1\.4/);
   assert.match(html, /href="\.\/campaign\.html"/, 'guest path remains available');
+  assert.match(html, /Przejdź do mapy gry/);
+  assert.match(html, /campaign-play-cta/);
+  assert.doesNotMatch(html, /5 poziomów, boss i 3 serca/);
   assert.match(html, /id="landing-account-dialog"[^>]*aria-labelledby="landing-account-title"/);
 }
 assert.match(css,/landing-account-dialog/);

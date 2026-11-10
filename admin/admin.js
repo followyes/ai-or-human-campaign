@@ -30,7 +30,6 @@ import {
 import { DeleteDrainCoordinator } from "../js/delete-queue.js";
 import { moveGameImageToClass, runSequentialMoveBatch } from "../js/content-class-move.js?v=0.8.1";
 import { UploadPreparationWorkerClient } from "../js/upload-worker-client.js?v=0.8.1";
-import { AdminResultsPanel } from "../js/admin-results-ui.js";
 import { getCampaignPhotoImpact } from "../js/campaign-admin-guard.js?v=0.8.1";
 import { fetchAdminQueueStatus } from "../js/campaign-admin-status.js";
 import { fetchAdminChallengeStatus } from "../js/campaign-challenge-admin-status.js";
@@ -161,14 +160,6 @@ let sessionRefreshPromise = null;
 const uploadPreparationWorker = new UploadPreparationWorkerClient();
 
 
-const resultsPanel = new AdminResultsPanel({
-  root: resultsWorkspace,
-  getSession: async () => await refreshCurrentSessionForMutation(),
-  onAuthFailure: () => {
-    clearAdminSession();
-    showLogin("Sesja administratora wygasła lub brak uprawnień.");
-  }
-});
 // ADMIN ONLY: request protected RPC; nicknames are rendered with textContent.
 const rankedBody = document.querySelector('#campaign-ranks-body');
 const rankedStatus = document.querySelector('#campaign-ranks-status');
@@ -225,7 +216,6 @@ function switchAdminTab(tab) {
   libraryWorkspace.inert = resultsActive;
   resultsWorkspace.hidden = !resultsActive;
   resultsWorkspace.inert = !resultsActive;
-  resultsPanel.setActive(resultsActive);
   if (resultsActive) void loadCampaignRanks();
 }
 function resetAdminTab() {
@@ -241,7 +231,6 @@ function resetAdminTab() {
   libraryWorkspace.inert = false;
   resultsWorkspace.hidden = true;
   resultsWorkspace.inert = true;
-  resultsPanel.setActive(false);
 }
 tabLibrary.addEventListener("click", () => switchAdminTab("library"));
 tabResults.addEventListener("click", () => switchAdminTab("results"));
@@ -339,9 +328,9 @@ function syncBusyControls() {
   challengeEnabled.disabled = contentInteractionBusy;
   challengeTopicInput.disabled = contentInteractionBusy;
 
-  logoutButton.disabled = authBusy || contentInteractionBusy || resultsPanel.busy;
-  tabLibrary.disabled = contentInteractionBusy || resultsPanel.busy;
-  tabResults.disabled = contentInteractionBusy || resultsPanel.busy;
+  logoutButton.disabled = authBusy || contentInteractionBusy;
+  tabLibrary.disabled = contentInteractionBusy;
+  tabResults.disabled = contentInteractionBusy;
   const noVisibleRows = filteredInventoryRows().length === 0;
   inventoryMoveButton.disabled = contentInteractionBusy || noVisibleRows;
   inventoryDeleteManyButton.disabled = contentInteractionBusy || noVisibleRows;
@@ -1132,7 +1121,6 @@ async function handleBulkMove(targetClass) {
 }
 
 function showLogin(message = "", { morph = true, focus = true } = {}) {
-  resultsPanel.clear();
   resetAdminTab();
   currentSession = null;
   challengeQueueRows=[];
@@ -1483,7 +1471,7 @@ form.addEventListener("submit", async (event) => {
 });
 
 logoutButton.addEventListener("click", async () => {
-  if (authBusy || uploadBusy || deleteBusy || moveBusy || inventoryBusy || resultsPanel.busy) return;
+  if (authBusy || uploadBusy || deleteBusy || moveBusy || inventoryBusy) return;
 
   const session = currentSession;
   setAuthBusy(true);

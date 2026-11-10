@@ -49,15 +49,20 @@ await assert.rejects(listAdminResults({...options, fetchImpl: async() => ({ok:fa
 await assert.rejects(clearAdminResults({...options, fetchImpl: async() => ({ok:true,json: async()=>({not:"count"})})}), {code:"RESPONSE"});
 assert.ok(AdminResultsError.prototype instanceof Error);
 const html = await readFile(new URL("../admin/index.html", import.meta.url), "utf8");
-for (const id of ["results-workspace", "tab-library", "tab-results", "results-clear", "results-search", "results-mode", "results-difficulty", "results-date-from", "results-date-to", "results-sort", "results-status", "results-list", "results-prev", "results-next", "results-page-label"]) {
-  assert.ok(html.includes(`id="${id}"`), `Missing Admin UI control ${id}`);
+for (const id of ["results-workspace", "tab-library", "tab-results", "campaign-rank-results", "campaign-ranks-body", "campaign-ranks-status", "campaign-ranks-refresh"]) {
+  assert.ok(html.includes(`id="${id}"`), `Missing campaign ranking UI control ${id}`);
 }
+for (const id of ["results-clear", "results-search", "results-mode", "results-difficulty", "results-date-from", "results-date-to", "results-sort", "results-status", "results-list", "results-prev", "results-next", "results-page-label"]) {
+  assert.ok(!html.includes(`id="${id}"`), `Legacy results control must be removed: ${id}`);
+}
+assert.ok(!html.includes('legacy-results') && !html.includes('Starsze wyniki Classic / Speed Run'));
 const code = await readFile(new URL("../admin/admin.js", import.meta.url), "utf8");
-assert.ok(code.includes('resultsPanel.clear()') && code.includes('resultsPanel.setActive(resultsActive)'));
+assert.ok(code.includes('loadCampaignRanks') && code.includes('campaign_admin_rank_results'));
+assert.ok(!code.includes('new AdminResultsPanel('));
 const ui = await readFile(new URL("../js/admin-results-ui.js", import.meta.url), "utf8");
 assert.ok(ui.includes("name.textContent = record.player_name"), "public names must use textContent");
 assert.ok(!ui.includes("innerHTML"), "no untrusted HTML injection");
 assert.ok(html.includes('id="admin-workspace"'));
-const game = await readFile(new URL("../classic.html", import.meta.url), "utf8");
+const game = await readFile(new URL("../index.html", import.meta.url), "utf8");
 assert.ok(game.includes('id="player-name"') && !game.includes('profile-dialog__eyebrow'), "profile dialog compact, controls preserved");
-console.log("R2 TEST PASS — server query filters & IDs, paging, RPC, access failures, DOM contracts, compact profile");
+console.log("R2 TEST PASS — legacy API contracts retained, legacy UI removed, verified ranking tab intact");

@@ -2870,3 +2870,57 @@ body[data-public-view="mode-select"] .profile-entry {
 .landing-account-signed span{font-size:13px;color:var(--muted,#a4b3bf);margin-bottom:10px;overflow-wrap:anywhere}
 .landing-account-dialog__guest{margin:16px 0 0;text-align:center}
 @media(max-width:400px){body[data-public-view="mode-select"] .profile-entry{min-width:116px;padding:0 10px}.profile-entry__caption{font-size:11px;max-width:92px}}
+
+/* Campaign v0.9.1.4 — pojedyncze wejście z wyraźnym przyciskiem Play.
+   Cały kafelek jest linkiem, więc nie zagnieżdżamy interaktywnego button w <a>. */
+#mode-select-panel .campaign-mode-entry {
+  grid-template-columns: 64px minmax(0, 1fr);
+  min-height: 154px;
+  column-gap: 18px;
+  align-items: center;
+}
+#mode-select-panel .campaign-mode-entry .game-mode-card__copy {
+  gap: 12px;
+}
+#mode-select-panel .campaign-mode-entry .game-mode-card__copy strong {
+  font-size: clamp(1.18rem, 3vw, 1.45rem);
+  line-height: 1.2;
+}
+#mode-select-panel .campaign-mode-entry .campaign-play-cta {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 124px;
+  min-height: 42px;
+  padding: 9px 22px;
+  border-radius: 12px;
+  background: #8ce7d7;
+  color: #092b31;
+  font-size: 0.98rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 16px rgba(13, 89, 86, 0.20);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+#mode-select-panel .campaign-mode-entry:hover .campaign-play-cta,
+#mode-select-panel .campaign-mode-entry:focus-visible .campaign-play-cta {
+  background: #b5faed;
+  box-shadow: 0 7px 23px rgba(13, 89, 86, 0.26);
+}
+@media (max-width: 390px) {
+  #mode-select-panel .campaign-mode-entry {
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-height: 144px;
+    column-gap: 13px;
+    padding: 15px;
+  }
+  #mode-select-panel .campaign-mode-entry .game-mode-card__icon {
+    width: 48px;
+    height: 48px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #mode-select-panel .campaign-mode-entry .campaign-play-cta { transition: none; }
+}
