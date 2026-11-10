@@ -1082,6 +1082,10 @@ function bootstrap() {
 }
 
 profileButton.addEventListener("click", () => {
+  if (state === "mode-select") {
+    window.openCampaignLandingAccount?.();
+    return;
+  }
   if (!["mode-select", "mode-setup", "result"].includes(state)) return;
   openProfileDialog("manage", profileButton);
 });

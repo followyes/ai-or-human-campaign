@@ -66,8 +66,10 @@ export class CampaignAccount {
       return this.user;
     } catch { this.user = null; this.session = null; writeStorage(null); return null; }
   }
-  async signUp(email, password, nickname) {
-    const data = await this.request(`/auth/v1/signup?redirect_to=${encodeURIComponent(`${location.origin}${location.pathname}`)}`, {method:'POST',body: {
+  async signUp(email, password, nickname, redirectUrl = `${location.origin}${location.pathname}`) {
+    // Redirect URL is caller-selected from the project's configured Supabase allowlist.
+    // The homepage uses campaign.html, avoiding an unlisted landing callback.
+    const data = await this.request(`/auth/v1/signup?redirect_to=${encodeURIComponent(redirectUrl)}`, {method:'POST',body: {
       email, password, data: { nickname }
     }});
     if (this.adoptSession(data)) this.user = data.user || await this.request('/auth/v1/user', { authenticated: true });

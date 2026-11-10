@@ -690,3 +690,7 @@ body {
 .map-return-current:hover{background:#246375}
 .map-return-current:focus-visible{outline:3px solid #b0ffda;outline-offset:3px}
 .map-return-current[hidden]{display:none!important}
+
+/* v0.9.1.2: only the authorized test-account reset may be displayed. */
+#reset-demo { display:none!important; }
+#test-account-reset[hidden] { display:none!important; }

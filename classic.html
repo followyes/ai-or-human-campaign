@@ -22,7 +22,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2716%27 fill=%27%2320272d%27/%3E%3Ctext x=%2732%27 y=%2741%27 text-anchor=%27middle%27 font-family=%27Arial,sans-serif%27 font-size=%2730%27 font-weight=%27700%27 fill=%27white%27%3EAI%3C/text%3E%3C/svg%3E">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-dark.webp">
   <link rel="preload" as="image" type="image/webp" href="./assets/game/card-back-light.webp">
-  <link rel="stylesheet" href="./css/style.css?v=0.4.3">
+  <link rel="stylesheet" href="./css/style.css?v=0.9.1.2">
 </head>
 <body data-public-view="mode-select">
   <div class="game-atmosphere" id="game-atmosphere" aria-hidden="true">
@@ -133,11 +133,12 @@
     </span>
   </button>
 
-  <button class="profile-entry" id="profile-button" type="button" aria-label="Wybierz gracza" title="Profil gracza">
+  <button class="profile-entry" id="profile-button" type="button" aria-label="Zaloguj się lub utwórz konto gracza" title="Konto gracza">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
       <circle cx="12" cy="8" r="3.5"></circle>
       <path d="M5.5 20c.2-3.7 2.6-5.7 6.5-5.7s6.3 2 6.5 5.7"></path>
     </svg>
+    <span class="profile-entry__caption" id="landing-account-caption">Zaloguj się</span>
     <span class="profile-entry__dot" aria-hidden="true"></span>
   </button>
 
@@ -375,6 +376,36 @@
     </section>
   </div>
 
-  <script type="module" src="./js/game.js?v=0.4.3"></script>
+  <!-- v0.9.1.2: Sign in/up before entering Campaign, sharing the SAME Supabase session. -->
+  <dialog id="landing-account-dialog" class="landing-account-dialog" aria-labelledby="landing-account-title">
+    <div class="landing-account-dialog__heading">
+      <h2 id="landing-account-title">Zaloguj się</h2>
+      <button id="landing-account-close" class="landing-account-dialog__close" type="button" aria-label="Zamknij">×</button>
+    </div>
+    <p class="landing-account-dialog__intro" id="landing-account-intro">Zaloguj się, aby zapisywać postęp i punkty na koncie.</p>
+    <form id="landing-account-form" class="landing-account-form">
+      <label for="landing-account-email">E-mail</label>
+      <input id="landing-account-email" type="email" autocomplete="email" required maxlength="254" placeholder="twoj@email.pl">
+      <label for="landing-account-password">Hasło</label>
+      <input id="landing-account-password" type="password" autocomplete="current-password" required minlength="8" placeholder="Twoje hasło">
+      <div id="landing-account-nickname-row" hidden>
+        <label for="landing-account-nickname">Pseudonim</label>
+        <input id="landing-account-nickname" type="text" autocomplete="nickname" minlength="3" maxlength="24" pattern="[a-zA-Z0-9_]+" placeholder="np. Gracz123">
+      </div>
+      <p class="landing-account-message" id="landing-account-message" role="status" aria-live="polite"></p>
+      <button id="landing-account-submit" class="landing-account-primary" type="submit">Zaloguj się</button>
+    </form>
+    <button id="landing-account-switch" class="landing-account-link" type="button">Nie masz konta? Zarejestruj się</button>
+    <div class="landing-account-signed" id="landing-account-signed" hidden>
+      <strong id="landing-account-display-name"></strong>
+      <span id="landing-account-display-email"></span>
+      <a class="landing-account-primary" href="./campaign.html">Przejdź do kampanii</a>
+      <button class="landing-account-link" id="landing-account-signout" type="button">Wyloguj się</button>
+    </div>
+    <p class="landing-account-dialog__guest">Możesz też grać bez logowania — wtedy postęp pozostaje na tym urządzeniu.</p>
+  </dialog>
+
+  <script type="module" src="./js/landing-account.js?v=0.9.1.2"></script>
+  <script type="module" src="./js/game.js?v=0.9.1.2"></script>
 </body>
 </html>

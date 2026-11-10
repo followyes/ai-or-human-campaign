@@ -252,7 +252,7 @@ function renderMap() {
   $('#sync-status-note').textContent = useCloud()
     ? 'Postęp i punkty zapisane na koncie. Ranking beta: wyniki sprawdza serwer.'
     : 'Bez konta postęp i punkty zostają na tym urządzeniu.';
-  $('#reset-demo').hidden = useCloud();
+  $('#reset-demo').hidden = true; // obsolete local reset is never a public action
   const doneCount = contentSource === 'supabase' ? completedCount(progress, activeStages) : progress.completed;
   const challengeDone = activeChallenges.filter(s=>(progress.completedStageIds || []).includes(s.uid)).length;
   progressLabel.textContent = `${doneCount} / ${activeStages.length}${activeChallenges.length ? ` · ✦ ${challengeDone}/${activeChallenges.length}` : ''}`;
@@ -950,6 +950,7 @@ $("#reset-demo").addEventListener("click", () => {
   save();
   renderMap();
 });
+// The old guest reset is hidden by HTML and CSS, not exposed as a UI action.
 
 document.addEventListener("keydown", (event) => {
   if (screen !== "play" || event.altKey || event.ctrlKey || event.metaKey) return;
